@@ -23,7 +23,7 @@ class PredictionClass:
 
     def __init__(self):
         self.berlin = pytz.timezone("Europe/Berlin")
-        self.azimuthPV = np.array([110, 200, 290])
+        self.azimuthPV = np.array([118, 208, 298])
         self.zenithPV = np.array([35, 35, 35])
         self.pwrPeak = np.array([900, 7800, 900])
         self.qConsPerDay = 4000  # 5000Wh: 15kWh/100km * 33km
