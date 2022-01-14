@@ -145,6 +145,11 @@ class PredictionClass:
         self.powProd_a = []
         self.powCons_a = []
         self.date_a = []
+        __Date_a = []
+        __TEnv_a = []
+        __RClouds_a = []
+
+
         # s = sun(city.observer, date=datetime.date.today())
         response = requests.get(
             "http://api.openweathermap.org/data/2.5/onecall?lat=48.9805&lon=8.98356&exclude=minutely&appid=d2d5732789261d036171254607f31898")
@@ -153,58 +158,46 @@ class PredictionClass:
             date_simpl = datetime.datetime.fromtimestamp(myhour["dt"])
 
             date = self.berlin.localize(date_simpl)
-            self.date_a.append(date_simpl)
+            __Date_a.append(date_simpl)
 
-            # print(get_altitude(latitude, longitude, date))
-            # print(get_azimuth(latitude, longitude, date))
-            # print('Zeit: ' + str(datetime.datetime.fromtimestamp(myhour["dt"])))
-
-            tEnv = myhour["temp"] - 273.15
+            __tEnv = myhour["temp"] - 273.15
             # print('temp: ' + str(tEnv))
-            rClouds = myhour["clouds"] / 100
+            __rClouds = myhour["clouds"] / 100
             # print('wolken: ' + str(rClouds))
-            powProd = self.getPower(date, rClouds)
-            powCons = self.getPowCons(tEnv, rClouds, date)
-            self.powProd_a.append(powProd)
-            print("Power produced: " + str(powProd))
-            print("Power consumed: " + str(powCons))
-            self.powCons_a.append(powCons)
-            print("------------------------------------------")
-        # self.updateSOCLims()
-        dateDay_a = []
-        rCloudsDay_a = []
-        tDay_a = []
+            __RClouds_a.append(__rClouds)
+            __TEnv_a.append(__tEnv)
+
         for days in response.json()['daily']:
             date_simpl = datetime.datetime.fromtimestamp(days["dt"])
             date = self.berlin.localize(date_simpl)
-            dateDay_a.append(date - datetime.timedelta(hours=6))
-            dateDay_a.append(date)
-            dateDay_a.append(date + datetime.timedelta(hours=6))
-            dateDay_a.append(date + datetime.timedelta(hours=12))
+            __Date_a.append(date - datetime.timedelta(hours=6))
+            __Date_a.append(date)
+            __Date_a.append(date + datetime.timedelta(hours=6))
+            __Date_a.append(date + datetime.timedelta(hours=12))
             print(days["temp"]["eve"])
-            tDay_a.append(days["temp"]["morn"] - 273.15)
-            tDay_a.append(days["temp"]["day"] - 273.15)
-            tDay_a.append(days["temp"]["eve"] - 273.15)
-            tDay_a.append(days["temp"]["night"] - 273.15)
+            __TEnv_a.append(days["temp"]["morn"] - 273.15)
+            __TEnv_a.append(days["temp"]["day"] - 273.15)
+            __TEnv_a.append(days["temp"]["eve"] - 273.15)
+            __TEnv_a.append(days["temp"]["night"] - 273.15)
             rClouds = days["clouds"] / 100
             for i in range(0, 4):
-                rCloudsDay_a.append(rClouds)
+                __RClouds_a.append(rClouds)
 
-        timeExtrpDays = self.berlin.localize(self.date_a[-1]) + datetime.timedelta(hours=1)
-        # endDate = dateDay_a[-1] + datetime.timedelta(hours=11)
-        # ti = [pd.to_datetime(d) for d in self.Time_a]
-        dateDay_a_ts = [self.toTimestamp(dateDay_a[n]) for n in range(0, len(dateDay_a))]
-        while timeExtrpDays < dateDay_a[-1]:
-            timeExtrpDays = timeExtrpDays + datetime.timedelta(hours=1)
+        timeExtrpDays = self.berlin.localize(__Date_a[0])
+
+        dateDay_a_ts = [self.toTimestamp(__Date_a[n]) for n in range(0, len(__Date_a))]
+        while timeExtrpDays <= __Date_a[-1]:
+
             timeExtrpDays_ts = self.toTimestamp(timeExtrpDays)
-            self.date_a.append(timeExtrpDays)
-            tempRClouds = interpolate.interp1d(dateDay_a_ts, rCloudsDay_a)(timeExtrpDays_ts)
-            temptEnv = interpolate.interp1d(dateDay_a_ts, tDay_a)(timeExtrpDays_ts)
+            tempRClouds = interpolate.interp1d(dateDay_a_ts, __RClouds_a)(timeExtrpDays_ts)
+            temptEnv = interpolate.interp1d(dateDay_a_ts, __TEnv_a)(timeExtrpDays_ts)
             powProd = self.getPower(timeExtrpDays, tempRClouds)
             powCons = self.getPowCons(temptEnv, tempRClouds, timeExtrpDays)
             self.powProd_a.append(powProd)
             self.powCons_a.append(powCons)
 
+            self.date_a.append(timeExtrpDays)
+            timeExtrpDays = timeExtrpDays + datetime.timedelta(minutes=5)
         #self.updateSOCLims()
 
     def toTimestamp(self, d):
