@@ -30,7 +30,7 @@ class PredictionClass:
         self.hDailyCons = 13  # assume daily consumption at 12pm
         self.minSOCVehTar = 50
         self.maxSOCVehTarProdChrg = 70
-        self.maxSOCVehTarExcessChrg = 90
+        self.maxSOCVehTarExcessChrg = 100
 
         self.consPer100km = 15000.0  # Wh/100km
         self.anglZenithPwrDiff_a = [90, 60, 30]
@@ -107,8 +107,11 @@ class PredictionClass:
                 self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehTarExcessChrg
 
             else:
-                _prod = (self.powProd_a[i] + self.powProd_a[i + 1]) / 2
-                _cons = (self.powCons_a[i] + self.powCons_a[i + 1]) / 2
+                __timediff = self.date_a[i+1] - self.date_a[i]
+                __timediff_in_h = __timediff.total_seconds()/3600
+                print("timediff in h: "+str(__timediff_in_h))
+                _prod = (self.powProd_a[i] + self.powProd_a[i + 1]) / 2 * __timediff_in_h
+                _cons = (self.powCons_a[i] + self.powCons_a[i + 1]) / 2 * __timediff_in_h
                 _excess = _prod - _cons
 
                 self.minSOCHome_a[i] = self.minSOCHome_a[i + 1] - _excess / self.qBatt * 100
@@ -125,7 +128,6 @@ class PredictionClass:
 
                 if self.date_a[i].hour == self.hDailyCons:
                     deltaSOC = self.getDailyCons(self.date_a[i])
-                    print("deltaSOC: "+str(deltaSOC))
                     self.minSOCVeh_a[i] += deltaSOC
                     self.maxSOCVehProdChrg_a[i] += deltaSOC
                     self.maxSOCVehExcessChrg_a[i] += deltaSOC
