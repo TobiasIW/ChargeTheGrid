@@ -19,6 +19,8 @@ class PredictionClass:
     longitude = 8.98356
     qBatt = 8000  # Batteriekapazität Hausbattereie 8kWh
     qVeh = 34000
+    maxBattPowDischa = -3300
+    maxBattPowChrg = 3300
     maxFeedIn = 4200  # maximale Einspeiseleistung W
 
     def __init__(self):
@@ -112,7 +114,7 @@ class PredictionClass:
                 print("timediff in h: "+str(__timediff_in_h))
                 _prod = (self.powProd_a[i] + self.powProd_a[i + 1]) / 2 * __timediff_in_h
                 _cons = (self.powCons_a[i] + self.powCons_a[i + 1]) / 2 * __timediff_in_h
-                _excess = _prod - _cons
+                _excess = max(self.maxBattPowDischa, min(self.maxBattPowChrg, _prod - _cons))
 
                 self.minSOCHome_a[i] = self.minSOCHome_a[i + 1] - _excess / self.qBatt * 100
                 _qExcess = -min(0, self.minSOCHome_a[i] * self.qBatt / 100)
