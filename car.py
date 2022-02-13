@@ -18,8 +18,17 @@ class carClass:
         _state = int(charger.state)
         if (_state == 2) or (_state == 4):
             _power = float(charger.power)
-            if (self._oldState != 2) and (self._oldState != 4):
-                self.getInfo()
+            if (self._oldState != 2) and (self._oldState != 4) and (self._oldState != 0):
+                try:
+                    self.getInfo()
+                except Exception as e:
+                    print(e)
+                    logging.error("Exception SOC: ")
+                    logging.error(e)
+                    if self.newValue == 3:
+                        self.newValue = 2
+                    else:
+                        self.newValue = 3
         else:
             _power = 0  # -0.2 * 15 * 1000 / 24
 

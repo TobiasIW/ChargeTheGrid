@@ -6,6 +6,7 @@ from kasa import SmartPlug
 import os.path
 import time
 import datetime
+import pytz
 
 
 class visualizationClass:
@@ -36,6 +37,7 @@ class visualizationClass:
     def __init__(self):
         self.newValueSOCCar_a = []
         self.FeedIn_pow = []
+        self.berlin = pytz.timezone("Europe/Berlin")
 
     def readVal(self, Attr):
 
@@ -97,7 +99,9 @@ class visualizationClass:
                 self.GridFeedIn_pow_a.append(int(row[4]))
                 self.OperatingMode_a.append(int(row[5]))
                 self.SystemStatus_a.append(row[6])
-                self.Time_a.append(row[7])
+                #__time = datetime.datetime.timestamp(datetime.datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S"))
+                #__timeStr=self.berlin.localize(__time)
+                self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
                 if self.GridFeedIn_pow_a[i - 2] > 0:
                     self.FeedIn_pow = self.GridFeedIn_pow_a[i - 2]
                     self.Grid_Consumption_pow = 0
@@ -106,10 +110,10 @@ class visualizationClass:
                     self.Grid_Consumption_pow = -self.GridFeedIn_pow_a[i - 2]
 
                 if i > 2:
-                    time_delta = pd.to_datetime(self.Time_a[i - 2]) - pd.to_datetime(self.Time_a[i - 3])
+                    time_delta = self.Time_a[i - 2] - self.Time_a[i - 3]
                     self.exec_delta = (time_delta.total_seconds() / 3600)
                     self.Consumption.append(self.Consumption[i - 3] + (
-                                self.Cons_a[i - 2] + self.Cons_a[i - 3]) / 2 * self.exec_delta / 1000)
+                            self.Cons_a[i - 2] + self.Cons_a[i - 3]) / 2 * self.exec_delta / 1000)
                     self.Production.append(
                         self.Production[i - 3] + (self.Prod_a[i - 2] + self.Prod_a[i - 2]) / 2 * self.exec_delta / 1000)
                     self.FeedIn.append(self.FeedIn[i - 3] + self.FeedIn_pow * self.exec_delta / 1000)
@@ -134,30 +138,45 @@ class visualizationClass:
         ti = [pd.to_datetime(d) for d in self.Time_a]
         # print(ti)
         # defining subplots and their positions 
-        plt1 = plt.subplot2grid((34, 1), (0, 0), rowspan=8, colspan=1)
-        plt2 = plt.subplot2grid((34, 1), (10, 0), rowspan=5, colspan=1)
-        plt3 = plt.subplot2grid((34, 1), (17, 0), rowspan=6, colspan=1)
-        plt4 = plt.subplot2grid((34, 1), (25, 0), rowspan=1, colspan=1)
-        plt5 = plt.subplot2grid((34, 1), (28, 0), rowspan=2, colspan=1)
-        plt6 = plt.subplot2grid((34, 1), (32, 0), rowspan=2, colspan=1)
+        plt1 = plt.subplot2grid((34, 4), (0, 0), rowspan=8, colspan=2)
+        plt2 = plt.subplot2grid((34, 4), (10, 0), rowspan=5, colspan=2)
+        plt3 = plt.subplot2grid((34, 4), (17, 0), rowspan=6, colspan=2)
+        plt4 = plt.subplot2grid((34, 4), (25, 0), rowspan=1, colspan=2)
+        plt5 = plt.subplot2grid((34, 4), (28, 0), rowspan=2, colspan=2)
+        plt6 = plt.subplot2grid((34, 4), (32, 0), rowspan=2, colspan=2)
+        plt1_2 = plt.subplot2grid((34, 4), (0, 2), rowspan=8, colspan=2)
+        plt2_2 = plt.subplot2grid((34, 4), (10, 2), rowspan=5, colspan=2)
         plt.subplots_adjust(hspace=1)
 
         # plotting the points
+        __endofday = datetime.datetime.now().replace(hour=23, minute=59, second=59)
+        if len(pred.date_a) > 0:
+            __endpred = pred.date_a[-1]
+        else:
+            __endpred = __endofday
         plt1.set_ylim(-5000, 10000)
-        plt1.set_xlim(ti[0], pred.date_a[-1])
+        plt1.set_xlim(ti[0], __endofday)
+
+        plt1_2.set_ylim(-5000, 10000)
+        plt1_2.set_xlim(__endofday, __endpred)
+        # plt1_2.yticks([-5000, -2500, 0, 2500, 5000, 7500, 10000], "")
 
         plt2.set_ylim(0, 101)
-        plt2.set_xlim(ti[0], pred.date_a[-1])
+        plt2.set_xlim(ti[0], __endofday)
 
-        plt3.set_xlim(ti[0], pred.date_a[-1])
+        plt2_2.set_ylim(0, 101)
+        plt2_2.set_xlim(__endofday, __endpred)
+        # plt2_2.yticks([0, 50, 100], "")
+
+        plt3.set_xlim(ti[0], __endofday)
 
         plt4.set_ylim(-0.1, 3.1)
-        plt4.set_xlim(ti[0], pred.date_a[-1])
+        plt4.set_xlim(ti[0], __endofday)
 
         plt5.set_ylim(-0.1, 5.1)
-        plt5.set_xlim(ti[0], pred.date_a[-1])
+        plt5.set_xlim(ti[0], __endofday)
 
-        plt6.set_xlim(ti[0], pred.date_a[-1])
+        plt6.set_xlim(ti[0], __endofday)
 
         plt1.plot(ti, self.Cons_a, label="Verbrauch")
         plt1.plot(ti, self.Prod_a, label="Produktion")
@@ -166,6 +185,9 @@ class visualizationClass:
         plt1.plot(ti, self.ConsHome_a, label="Verbr. o. WB")
         plt1.plot(pred.date_a, pred.powProd_a, label="präd. Produktion")
         plt1.plot(pred.date_a, pred.powCons_a, label="präd. Verbrauch")
+        plt1_2.plot(pred.date_a, pred.powProd_a, label="präd. Produktion")
+        plt1_2.plot(pred.date_a, pred.powCons_a, label="präd. Verbrauch")
+
         plt2.plot(ti, self.SOC_a, label="SOC")
         plt2.plot(ti, self.Car_SOC_a, label="SOC_Auto")
         plt2.plot(pred.date_a, pred.minSOCHome_a, '--', label="min. SOC Haus")
@@ -174,11 +196,16 @@ class visualizationClass:
         plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, '--', label="Min SOC Veh Überschuss")
         plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, '--', label="Min SOC Veh Abriegeln")
 
-
         plt2.annotate("{:10.0f}".format(self.SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.SOC_a[i - 2]),
                       horizontalalignment="right")
         plt2.annotate("{:10.0f}".format(self.Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.Car_SOC_a[i - 2]),
                       horizontalalignment="right")
+
+        plt2_2.plot(pred.date_a, pred.minSOCHome_a, '--', label="min. SOC Haus")
+        plt2_2.plot(pred.date_a, pred.maxSOCHome_a, '--', label="max. SOC Haus")
+        plt2_2.plot(pred.date_a, pred.minSOCVeh_a, '--', label="Min SOC Veh High Prio")
+        plt2_2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, '--', label="Min SOC Veh Überschuss")
+        plt2_2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, '--', label="Min SOC Veh Abriegeln")
 
         plt3.plot(ti, self.Consumption, label="Verbrauch")
         plt3.plot(ti, self.Production, label="Produktion")
@@ -215,7 +242,11 @@ class visualizationClass:
         figure = plt.gcf()  # get current figure
         figure.set_size_inches(18, 15)
         plt1.grid()
+        plt1_2.grid()
+
         plt2.grid()
+        plt2_2.grid()
+
         plt3.grid()
 
         plt4.grid()

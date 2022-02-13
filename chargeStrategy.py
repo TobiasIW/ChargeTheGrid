@@ -41,70 +41,50 @@ class chargeStrategy:
 
         OFF = 0
         ON = 1
-        HIGH_PRIO = 2
-        NORMAL = 3
-        LOW_PRIO = 4
+        AUTO = 2
+
         MANUAL = 5
-        AUTO = 6
 
         homeData.stChargeMode = stChargeMode
 
-        print("ChargeMode:" + str(stChargeMode))
-        # if stChargeMode == AUTO:
-        #     homeData.flgAuto = 1
-        #     city = LocationInfo("Vaihingen", "Germany", "Europe/Berlin", 48.5, 8.5)
-        #
-        #     s = sun(city.observer, date=datetime.date.today())
-        #
-        #     if datetime.datetime.now(utc) < (s["sunrise"]) + datetime.timedelta(hours=2):
-        #         stChargeMode = LOW_PRIO
-        #         print(" before sunrise +2")
-        #     else:
-        #         if (datetime.datetime.now(utc) <= (s["noon"] + datetime.timedelta(hours=1))):
-        #             stChargeMode = HIGH_PRIO
-        #             print(" before noon+1")
-        #         else:
-        #             if (datetime.datetime.now(utc) < s["sunset"]):
-        #                 stChargeMode = NORMAL
-        #                 print("after noon")
-        #
-        #             else:
-        #                 stChargeMode = LOW_PRIO
-        #                 print("after sunset")
-        # else:
-        #     flgAuto = 0
         flgAllow1P = False
         if stChargeMode == OFF:
             pwrAvl = 0
         if stChargeMode == ON:
             pwrAvl = 11000
-        if stChargeMode >= HIGH_PRIO:
-            timeNow_ts = pred.toTimestamp(datetime.datetime.now())
-            dateDay_a_ts = [pred.toTimestamp(pred.date_a[n]) for n in range(0, len(pred.date_a))]
-            minSOCVeh = interpolate.interp1d(dateDay_a_ts, pred.minSOCVeh_a)(timeNow_ts)
-            maxSOCVehProdChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehProdChrg_a)(timeNow_ts)
-            maxSOCVehExcessChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehExcessChrg_a)(timeNow_ts)
-            minSOCHomeExcessCharge = interpolate.interp1d(dateDay_a_ts, pred.minSOCHome_a)(timeNow_ts)
-            print("minSOC:" + str(minSOCVeh))
+        if stChargeMode >= AUTO:
+            if len(pred.date_a)>0:
+                timeNow_ts = pred.toTimestamp(datetime.datetime.now())
+                dateDay_a_ts = [pred.toTimestamp(pred.date_a[n]) for n in range(0, len(pred.date_a))]
+                minSOCVeh = interpolate.interp1d(dateDay_a_ts, pred.minSOCVeh_a)(timeNow_ts)
+                maxSOCVehProdChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehProdChrg_a)(timeNow_ts)
+                maxSOCVehExcessChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehExcessChrg_a)(timeNow_ts)
+                minSOCHomeExcessCharge = interpolate.interp1d(dateDay_a_ts, pred.minSOCHome_a)(timeNow_ts)
+                print("minSOC:" + str(minSOCVeh))
 
-            if myCar.SOC > maxSOCVehExcessChrg:
-                if homeData.SOC > 97:
-                    pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn
-                    flgAllow1P = True
-                else:
-                    pwrAvl = 0
-            else:
-                if myCar.SOC > maxSOCVehProdChrg:
-                    flgAllow1P = True
-                    pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) + min(3300, (
-                            homeData.SOC - minSOCHomeExcessCharge - 1) * 500)
-                    if homeData.SOC == 0:
+                if myCar.SOC > maxSOCVehExcessChrg: # above upper limit for prediction based smart charging. only charge if otherwise, power would be cut
+                    if homeData.SOC > 97:
+                        pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn
                         flgAllow1P = True
+                    else:
+                        pwrAvl = 0
                 else:
-                    if myCar.SOC > minSOCVeh:
-                        pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) # + max(0, min(3300, (homeData.SOC - 5) * 330))
-                    else:  # below min SOC: charge with full power
-                        pwrAvl = 11000
+
+                    pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) + min(-pred.maxBattPowDischa, max((
+                                homeData.SOC - minSOCHomeExcessCharge - 1) * 500, - pred.maxBattPowChrg))
+                    if myCar.SOC > maxSOCVehProdChrg: # above upper limit for normal smart charging. charge when above minimum house SOC
+                        flgAllow1P = True
+                        pwrAvl = pwrAvlExcChrg
+                        # if homeData.SOC == 0:
+                           # flgAllow1P = True
+                    else:
+                        if myCar.SOC > minSOCVeh: # above minimum SOC: charge when production is greater than consumption
+                            pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) # + max(0, min(3300, (homeData.SOC - 5) * 330))
+                            pwrAvl = max(pwrAvl, pwrAvlExcChrg)
+                        else:  # below min SOC: charge with full power
+                            pwrAvl = 11000
+            else:
+                pwrAvl = 0
 
         try:
             if stChargeMode != MANUAL:
@@ -113,5 +93,5 @@ class chargeStrategy:
 
         except:
             pass
-        print("ChargeStratEnd")
+        # print("ChargeStratEnd")
         return 0

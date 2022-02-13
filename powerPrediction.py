@@ -2,10 +2,7 @@ import json
 import requests
 import time
 from datetime import datetime
-from astral.sun import sun
-from astral import LocationInfo
-import astral
-from pysolar.solar import *
+
 import datetime
 import pytz
 from scipy import interpolate
@@ -32,7 +29,7 @@ class PredictionClass:
         self.hDailyCons = 13  # assume daily consumption at 12pm
         self.minSOCVehTar = 50
         self.maxSOCVehTarProdChrg = 70
-        self.maxSOCVehTarExcessChrg = 100
+        self.maxSOCVehTarExcessChrg = 95
 
         self.consPer100km = 15000.0  # Wh/100km
         self.anglZenithPwrDiff_a = [90, 60, 30]
@@ -67,7 +64,7 @@ class PredictionClass:
             pwrDiff = np.sum(interpolate.interp1d(self.anglZenithPwrDiff_a, self.pwrDiff_a)(zenith) * self.pwrPeak)
             power = np.sum(self.pwrPeak * rArea * E / E_peak) + pwrDiff
 
-            print("power: " + str(power))
+            # print("power: " + str(power))
         else:
             power = 0
         return power
@@ -77,14 +74,14 @@ class PredictionClass:
             data = f.read()
 
         jDailyCons = json.loads(data)
-        cons = 30 * self.consPer100km / 100
+        cons = 0.30 * self.consPer100km
         for day in jDailyCons['consumption']:
 
             if arg_date.strftime("%Y-%m-%d") == day["date"]:
                 date = day["date"]
                 cons = float(day["km"]) * self.consPer100km / 100
 
-        print("Day: "+str(date)+", Cons: "+str(cons))
+        # print("Day: "+str(date)+", Cons: "+str(cons))
         return cons / self.qVeh * 100
 
     def updateSOCLims(self):
@@ -111,14 +108,14 @@ class PredictionClass:
             else:
                 __timediff = self.date_a[i+1] - self.date_a[i]
                 __timediff_in_h = __timediff.total_seconds()/3600
-                print("timediff in h: "+str(__timediff_in_h))
+                # print("timediff in h: "+str(__timediff_in_h))
                 _prod = (self.powProd_a[i] + self.powProd_a[i + 1]) / 2 * __timediff_in_h
                 _cons = (self.powCons_a[i] + self.powCons_a[i + 1]) / 2 * __timediff_in_h
                 _excess = max(self.maxBattPowDischa, min(self.maxBattPowChrg, _prod - _cons))
 
                 self.minSOCHome_a[i] = self.minSOCHome_a[i + 1] - _excess / self.qBatt * 100
                 _qExcess = -min(0, self.minSOCHome_a[i] * self.qBatt / 100)
-                self.minSOCHome_a[i] = min(100, max(0, self.minSOCHome_a[i]))
+                self.minSOCHome_a[i] = min(97, max(0, self.minSOCHome_a[i]))
 
                 self.maxSOCHome_a[i] = self.maxSOCHome_a[i + 1] - (_excess - self.maxFeedIn) / self.qBatt * 100
                 _qCutOff = -min(0, self.maxSOCHome_a[i] * self.qBatt / 100)
@@ -128,7 +125,7 @@ class PredictionClass:
                 self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i + 1] - _qExcess / self.qVeh * 100
                 self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1] - _qCutOff / self.qVeh * 100
 
-                if self.date_a[i].hour == self.hDailyCons:
+                if self.date_a[i].hour == self.hDailyCons and self.date_a[i+1].hour > self.hDailyCons: # first time hour matches configured time (if hDailyCons= 13, then 13:55
                     deltaSOC = self.getDailyCons(self.date_a[i])
                     self.minSOCVeh_a[i] += deltaSOC
                     self.maxSOCVehProdChrg_a[i] += deltaSOC
@@ -136,7 +133,7 @@ class PredictionClass:
 
                 self.minSOCVeh_a[i] = min(80, self.minSOCVeh_a[i])
                 self.maxSOCVehProdChrg_a[i] = min(90, self.maxSOCVehProdChrg_a[i])
-                self.maxSOCVehExcessChrg_a[i] = min(100, self.maxSOCVehExcessChrg_a[i])
+                self.maxSOCVehExcessChrg_a[i] = min(95, self.maxSOCVehExcessChrg_a[i])
 
                 self.minSOCVeh_a[i] = max(50, self.minSOCVeh_a[i])
                 self.maxSOCVehProdChrg_a[i] = max(40, self.maxSOCVehProdChrg_a[i])
@@ -152,7 +149,6 @@ class PredictionClass:
         __Date_a = []
         __TEnv_a = []
         __RClouds_a = []
-
 
         # s = sun(city.observer, date=datetime.date.today())
         response = requests.get(
@@ -178,7 +174,7 @@ class PredictionClass:
             __Date_a.append(date)
             __Date_a.append(date + datetime.timedelta(hours=6))
             __Date_a.append(date + datetime.timedelta(hours=12))
-            print(days["temp"]["eve"])
+            # print(days["temp"]["eve"])
             __TEnv_a.append(days["temp"]["morn"] - 273.15)
             __TEnv_a.append(days["temp"]["day"] - 273.15)
             __TEnv_a.append(days["temp"]["eve"] - 273.15)
@@ -202,7 +198,7 @@ class PredictionClass:
 
             self.date_a.append(timeExtrpDays)
             timeExtrpDays = timeExtrpDays + datetime.timedelta(minutes=5)
-        #self.updateSOCLims()
+        # self.updateSOCLims()
 
     def toTimestamp(self, d):
         return d.timestamp()

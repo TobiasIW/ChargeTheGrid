@@ -19,7 +19,7 @@ logging.error("started")
 
 sysCtrl.checkRunning()
 
-charger = goecharger.chargerClass("192.168.178.145")
+charger = goecharger.chargerClass("192.168.178.201")
 
 # print("test4")
 homeData = home.homeData()
@@ -46,9 +46,14 @@ while True:#
             else:
                 myCar.newValue = 3
         print("SOC: " + str(myCar.SOC))
-    if cycleCounter % 60 == 1:
+    if cycleCounter % 60 == 2:
         print("### start 60min Task ###")
-        pred.updatePrediction()
+        try:
+            pred.updatePrediction()
+        except Exception as e:
+            print(e)
+            logging.error("Exception prediction: ")
+            logging.error(e)
     print("### start 1min Task ###")
     pred.updateSOCLims()
     charger.updateVals()
