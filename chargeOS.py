@@ -1,6 +1,6 @@
 import os
 import sys
-import sysCtrl
+import datetime
 import time
 # import evaluate_sb
 import chargeStrategy
@@ -10,7 +10,8 @@ import visualization
 import car
 import logging
 import powerPrediction
-
+from sysCtrl import sysCtrlClass
+sysCtrl = sysCtrlClass()
 # logger=logging.getLogger("chargeOS")
 # logger.setLevel(logging.INFO)
 logging.basicConfig(format='%(asctime)s:%(levelname)s: %(message)s', filename='aaPyLog.log', level=logging.INFO)
@@ -32,9 +33,10 @@ cycleCounter = 0  # neuer Wert erst nach 2h
 while True:#
     #try:
     cycleCounter = cycleCounter + 1
-    if cycleCounter >= 120:
-        print("### start 120min Task ###")
-        cycleCounter = 0
+    flgExe, dT = sysCtrl.executeTask(60*120, 60*120)
+    if flgExe:
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 120min task###")
+        #print("### start 120min Task ###")
         try:
             myCar.getInfo()
         except Exception as e:
@@ -46,35 +48,37 @@ while True:#
             else:
                 myCar.newValue = 3
         print("SOC: " + str(myCar.SOC))
-    if cycleCounter % 60 == 2:
-        print("### start 60min Task ###")
+    flgExe, dT = sysCtrl.executeTask(60*60, 1)
+    if flgExe:
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 60min task###")
         try:
             pred.updatePrediction()
         except Exception as e:
             print(e)
             logging.error("Exception prediction: ")
             logging.error(e)
-    print("### start 1min Task ###")
-    pred.updateSOCLims()
-    charger.updateVals()
-    homeData.update(charger)
-    myCar.model(60, charger)
-    # print ("test7")
-    homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger, myCar, pred)
-    # print ("test8")
-    vis.writeCSV(homeData, charger, myCar)
-    # print ("test9")
-    vis.readCSV()
-    # print ("test10")
-    vis.plotData(pred)
-    # print ("test11")
-    #except Exception as e:
-    #    print(e)
-     #   logging.error('Exception outer: ')
-      #  logging.error(e)
-    print("cycle finished: {0}".format(str(cycleCounter)))
-    logging.error("cycle finished: " + str(cycleCounter))
-    time.sleep(55)
+    flgExe, dT = sysCtrl.executeTask(20, 0)
+    if flgExe:
+        print ("dT = " + str(dT))
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 20s task###")
+        charger.updateVals()
+        homeData.update(charger)
+        pred.updateSOCLims(homeData)
+        myCar.model(dT, charger)
+        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger, myCar, pred)
+        vis.writeCSV(homeData, charger, myCar)
+        print("cycle finished: {0}".format(str(cycleCounter)))
+        logging.error("cycle finished: " + str(cycleCounter))
+    flgExe, dT = sysCtrl.executeTask(60, 0)
+    if flgExe:
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 60s task###")
+        vis.plotData(pred)
+        #except Exception as e:
+        #    print(e)
+         #   logging.error('Exception outer: ')
+          #  logging.error(e)
+
+    time.sleep(1)
 # except:
 #    print("abbruch chargeOS")
 # finally:

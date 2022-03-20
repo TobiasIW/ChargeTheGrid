@@ -9,6 +9,7 @@ import datetime
 import pytz
 
 
+
 class visualizationClass:
     csvname = "/home/pi/Entwicklung/bat_stats.csv"
     exec_delta = 1 / 60  # time between scheduled execution in h
@@ -34,10 +35,7 @@ class visualizationClass:
     flgAuto_a = []
     Car_SOC_a = []
 
-    def __init__(self):
-        self.newValueSOCCar_a = []
-        self.FeedIn_pow = []
-        self.berlin = pytz.timezone("Europe/Berlin")
+
 
     def readVal(self, Attr):
 
@@ -63,10 +61,49 @@ class visualizationClass:
                  'flgAuto': homeData.flgAuto, 'CarStatus': charger.state, 'TimeStamp': homeData.TimeStamp,
                  'newValueSOCCar': myCar.newValue, 'Mode': homeData.stChargeMode, 'Cons_Home': homeData.Cons_home,
                  'SOC_Car': myCar.SOC})
+            data = csv.reader(open(self.csvname, 'r'))
 
-    def readCSV(self):
+            i = len(self.x) - 1#
+
+            self.SOC_a.append(homeData.SOC)
+            self.Prod_a.append(homeData.Prod)
+            self.Cons_a.append(homeData.Cons)
+            self.Batt_pow_a.append(homeData.Batt_pow)
+            self.GridFeedIn_pow_a.append(homeData.GridFeedIn_pow)
+            self.OperatingMode_a.append(homeData.OperatingMode)
+            self.SystemStatus_a.append(charger.state)
+
+            self.Time_a.append(self.berlin.localize(pd.to_datetime(homeData.TimeStamp)))
+            if self.GridFeedIn_pow_a[i] > 0:
+                self.FeedIn_pow = self.GridFeedIn_pow_a[i]
+                self.Grid_Consumption_pow = 0
+            else:
+                self.FeedIn_pow = 0
+                self.Grid_Consumption_pow = -self.GridFeedIn_pow_a[i]
+
+            if i > 2:
+                time_delta = self.Time_a[-1] - self.Time_a[-2]
+                self.exec_delta = (time_delta.total_seconds() / 3600)
+                self.Consumption.append(self.Consumption[- 1] + self.Cons_a[-1]  * self.exec_delta / 1000)
+                self.Production.append(self.Production[- 1] + self.Prod_a[-1] * self.exec_delta / 1000)
+                self.FeedIn.append(self.FeedIn[- 1] + self.FeedIn_pow * self.exec_delta / 1000)
+                self.Grid_Consumption.append(self.Grid_Consumption[-1] + self.Grid_Consumption_pow * self.exec_delta / 1000)
+
+            else:
+                self.Consumption.append(homeData.Cons * self.exec_delta / 1000)
+                self.Production.append(homeData.Prod * self.exec_delta / 1000)
+                self.FeedIn.append(self.FeedIn_pow * self.exec_delta / 1000)
+                self.Grid_Consumption.append(self.Grid_Consumption_pow * self.exec_delta / 1000)
+            self.newValueSOCCar_a.append(myCar.newValue)
+            self.stChargeMode_a.append(homeData.stChargeMode)
+            self.flgAuto_a.append(homeData.flgAuto)
+            self.ConsHome_a.append(homeData.Cons_home)  # int(row[10]))
+            self.Car_SOC_a.append(myCar.SOC)
+
+            self.x.append(i)
+
+    def clear(self):
         self.x = []
-
         self.SOC_a = []
         self.Prod_a = []
         self.Cons_a = []
@@ -86,6 +123,11 @@ class visualizationClass:
         self.stChargeMode_a = []
         self.flgAuto_a = []
         self.Car_SOC_a = []
+        self.FeedIn_pow = []
+
+    def __init__(self):
+        self.clear()
+        self.berlin = pytz.timezone("Europe/Berlin")
         data = csv.reader(open(self.csvname, 'r'))
         i = 0
         for row in data:
@@ -99,8 +141,6 @@ class visualizationClass:
                 self.GridFeedIn_pow_a.append(int(row[4]))
                 self.OperatingMode_a.append(int(row[5]))
                 self.SystemStatus_a.append(row[6])
-                #__time = datetime.datetime.timestamp(datetime.datetime.strptime(row[7], "%Y-%m-%d %H:%M:%S"))
-                #__timeStr=self.berlin.localize(__time)
                 self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
                 if self.GridFeedIn_pow_a[i - 2] > 0:
                     self.FeedIn_pow = self.GridFeedIn_pow_a[i - 2]
@@ -137,7 +177,8 @@ class visualizationClass:
         i = len(self.x)
         ti = [pd.to_datetime(d) for d in self.Time_a]
         # print(ti)
-        # defining subplots and their positions 
+        # defining subplots and their positions
+        #fig = plt.figure(figsize=(18, 15))
         plt1 = plt.subplot2grid((34, 4), (0, 0), rowspan=8, colspan=2)
         plt2 = plt.subplot2grid((34, 4), (10, 0), rowspan=5, colspan=2)
         plt3 = plt.subplot2grid((34, 4), (17, 0), rowspan=6, colspan=2)
@@ -146,7 +187,8 @@ class visualizationClass:
         plt6 = plt.subplot2grid((34, 4), (32, 0), rowspan=2, colspan=2)
         plt1_2 = plt.subplot2grid((34, 4), (0, 2), rowspan=8, colspan=2)
         plt2_2 = plt.subplot2grid((34, 4), (10, 2), rowspan=5, colspan=2)
-        plt.subplots_adjust(hspace=1)
+        plt.subplots_adjust(hspace=2, wspace=0)
+
 
         # plotting the points
         __endofday = datetime.datetime.now().replace(hour=23, minute=59, second=59)
@@ -178,23 +220,23 @@ class visualizationClass:
 
         plt6.set_xlim(ti[0], __endofday)
 
-        plt1.plot(ti, self.Cons_a, label="Verbrauch")
-        plt1.plot(ti, self.Prod_a, label="Produktion")
-        plt1.plot(ti, self.Batt_pow_a, label="Laden(-)/Entladen(+)")
-        plt1.plot(ti, self.GridFeedIn_pow_a, label="Einspeisung(+)/Bezug(-)")
-        plt1.plot(ti, self.ConsHome_a, label="Verbr. o. WB")
-        plt1.plot(pred.date_a, pred.powProd_a, label="präd. Produktion")
-        plt1.plot(pred.date_a, pred.powCons_a, label="präd. Verbrauch")
-        plt1_2.plot(pred.date_a, pred.powProd_a, label="präd. Produktion")
-        plt1_2.plot(pred.date_a, pred.powCons_a, label="präd. Verbrauch")
+        plt1.plot(ti, self.Cons_a, label="Verbrauch", linewidth="0.5")
+        plt1.plot(ti, self.Prod_a, label="Produktion", linewidth="0.5")
+        plt1.plot(ti, self.Batt_pow_a, label="Laden(-)/Entladen(+)", linewidth="0.5")
+        plt1.plot(ti, self.GridFeedIn_pow_a, label="Einspeisung(+)/Bezug(-)", linewidth="0.5")
+        plt1.plot(ti, self.ConsHome_a, label="Verbr. o. WB", linewidth="0.5")
+        plt1.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
+        plt1.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
+        plt1_2.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
+        plt1_2.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
 
-        plt2.plot(ti, self.SOC_a, label="SOC")
-        plt2.plot(ti, self.Car_SOC_a, label="SOC_Auto")
-        plt2.plot(pred.date_a, pred.minSOCHome_a, '--', label="min. SOC Haus")
-        plt2.plot(pred.date_a, pred.maxSOCHome_a, '--', label="max. SOC Haus")
-        plt2.plot(pred.date_a, pred.minSOCVeh_a, '--', label="Min SOC Veh High Prio")
-        plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, '--', label="Min SOC Veh Überschuss")
-        plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, '--', label="Min SOC Veh Abriegeln")
+        plt2.plot(ti, self.SOC_a, label="SOC", linewidth="0.5")
+        plt2.plot(ti, self.Car_SOC_a, label="SOC_Auto", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.minSOCHome_a, '--', label="min. SOC Haus", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.maxSOCHome_a, '--', label="max. SOC Haus", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.minSOCVeh_a, '--', label="Min SOC Veh High Prio", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, '--', label="Min SOC Veh Überschuss", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, '--', label="Min SOC Veh Abriegeln", linewidth="0.5")
 
         plt2.annotate("{:10.0f}".format(self.SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.SOC_a[i - 2]),
                       horizontalalignment="right")
@@ -227,7 +269,7 @@ class visualizationClass:
         plt5.annotate("{:10.0f}".format(self.stChargeMode_a[i - 2]) + "", xy=(ti[i - 2], self.stChargeMode_a[i - 2]),
                       horizontalalignment="right")
 
-        plt6.plot(ti, self.SystemStatus_a,
+        plt6.plot(ti, [int(i) for i in self.SystemStatus_a],
                   label="Fahrzeugstatus (Unknown/Error=0, Idle=1, Charging=2, WaitCar=3, Complete=4, Error=5)")
         # plt6.annotate("{:10.0f}".format(SystemStatus_a[i-2]) + "", xy=(ti[i-2], SystemStatus_a,[i-2]), horizontalalignment="right")
 
@@ -255,5 +297,11 @@ class visualizationClass:
         # plt3.grid()
         # plt.tight_layout()
         plt.savefig("/home/pi/Entwicklung/graph.png")
+        plt.savefig("/home/pi/Entwicklung/graph.svg", format = "svg")
+
         # plt.savefig("/var/www/html/graph.png")
-        plt.show()
+        #plt.show()
+        # html_str = mpld3.fig_to_html(fig)
+        # Html_file = open("index.html", "w")
+        # Html_file.write(html_str)
+        # Html_file.close()

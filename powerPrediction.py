@@ -26,7 +26,7 @@ class PredictionClass:
         self.zenithPV = np.array([35, 35, 35])
         self.pwrPeak = np.array([900, 7800, 900])
         self.qConsPerDay = 4000  # 5000Wh: 15kWh/100km * 33km
-        self.hDailyCons = 13  # assume daily consumption at 12pm
+        self.hDailyCons = 8  # assume daily consumption at 12pm
         self.minSOCVehTar = 50
         self.maxSOCVehTarProdChrg = 70
         self.maxSOCVehTarExcessChrg = 95
@@ -39,11 +39,16 @@ class PredictionClass:
         self.powCons_a = []
         self.date_a = []
         self.minSOCHome_a = []
+        self.minSOCHome_C = 5
         self.maxSOCHome_a = []
         self.minSOCVeh_a = []
         self.maxSOCVehProdChrg_a = []
         self.maxSOCVehExcessChrg_a = []
         self.city = LocationInfo("Vaihingen", "Germany", "Europe/Berlin", self.latitude, self.longitude)
+        self.date_predHomeSOC_a = []
+        self.predHomeSOC_a = []
+
+
 
     def getPower(self, date, rClouds):
         azimuth = Location(self.city).solar_azimuth(date)
@@ -84,9 +89,25 @@ class PredictionClass:
         # print("Day: "+str(date)+", Cons: "+str(cons))
         return cons / self.qVeh * 100
 
-    def updateSOCLims(self):
+    def updateSOCLims(self, home):
         minSOC_Start = 100
         maxSOC_Start = 100
+        i = 0
+        self.date_predHomeSOC_a = []
+        self.predHomeSOC_a = []
+        self.date_predHomeSOC_a.append(datetime.datetime.now())
+        self.predHomeSOC_a.append(home.SOC)
+        if len (self.date_a)>0:
+            date_a_ts=[self.toTimestamp(self.date_a[n]) for n in range(0, len(self.date_a))]
+            while self.date_predHomeSOC_a[i].day == datetime.datetime.now().day:
+
+                i = i + 1
+                self.date_predHomeSOC_a.append(self.date_predHomeSOC_a[-1] + datetime.timedelta(minutes=1))
+                __excess = interpolate.interp1d(date_a_ts, self.powProd_a)( self.toTimestamp(self.date_predHomeSOC_a[-1]) )- interpolate.interp1d(date_a_ts, self.powCons_a)( self.toTimestamp(self.date_predHomeSOC_a[-1]))
+                __excess = min(self.maxBattPowDischa, max(self.maxBattPowChrg, __excess))
+                self.predHomeSOC_a.append(self.predHomeSOC_a[-1] + __excess / self.qBatt * 100)
+                self.predHomeSOC_a[-1] = min(100, max(0, self.predHomeSOC_a[-1]))
+
 
         n = len(self.powProd_a) - 1
         n_1 = n + 1
@@ -106,26 +127,32 @@ class PredictionClass:
                 self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehTarExcessChrg
 
             else:
-                __timediff = self.date_a[i+1] - self.date_a[i]
-                __timediff_in_h = __timediff.total_seconds()/3600
+                __timediff = self.date_a[i + 1] - self.date_a[i]
+                __dt_in_h = __timediff.total_seconds() / 3600
                 # print("timediff in h: "+str(__timediff_in_h))
-                _prod = (self.powProd_a[i] + self.powProd_a[i + 1]) / 2 * __timediff_in_h
-                _cons = (self.powCons_a[i] + self.powCons_a[i + 1]) / 2 * __timediff_in_h
-                _excess = max(self.maxBattPowDischa, min(self.maxBattPowChrg, _prod - _cons))
+                _prod = (self.powProd_a[i] + self.powProd_a[i + 1]) / 2 * __dt_in_h
+                _cons = (self.powCons_a[i] + self.powCons_a[i + 1]) / 2 * __dt_in_h
+                _qExcess = _prod - _cons
+                _qExcessLim = max(self.maxBattPowDischa * __dt_in_h, min(self.maxBattPowChrg * __dt_in_h, _qExcess * 0.9))
+                _qExcessOvrBattLim = max(0, _qExcess - _qExcessLim)
 
-                self.minSOCHome_a[i] = self.minSOCHome_a[i + 1] - _excess / self.qBatt * 100
-                _qExcess = -min(0, self.minSOCHome_a[i] * self.qBatt / 100)
-                self.minSOCHome_a[i] = min(97, max(0, self.minSOCHome_a[i]))
+                self.minSOCHome_a[i] = self.minSOCHome_a[i + 1] - _qExcessLim / self.qBatt * 100
+                _qExcessBatt = -min(0, (self.minSOCHome_a[i] - self.minSOCHome_C) * self.qBatt / 100) + _qExcessOvrBattLim
+                self.minSOCHome_a[i] = min(97, max(self.minSOCHome_C, self.minSOCHome_a[i]))
 
-                self.maxSOCHome_a[i] = self.maxSOCHome_a[i + 1] - (_excess - self.maxFeedIn) / self.qBatt * 100
+                self.maxSOCHome_a[i] = self.maxSOCHome_a[i + 1] - (_qExcess - self.maxFeedIn* __dt_in_h) / self.qBatt * 100
                 _qCutOff = -min(0, self.maxSOCHome_a[i] * self.qBatt / 100)
                 self.maxSOCHome_a[i] = min(100, max(0, self.maxSOCHome_a[i]))
 
-                self.minSOCVeh_a[i] = self.minSOCVeh_a[i + 1] - max(0, _excess) / self.qVeh * 100
-                self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i + 1] - _qExcess / self.qVeh * 100
-                self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1] - _qCutOff / self.qVeh * 100
+                self.minSOCVeh_a[i] = self.minSOCVeh_a[i + 1] - max(0, _qExcessBatt) / self.qVeh * 100
+                self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt / self.qVeh * 100
+                if _prod - _cons > self.maxFeedIn * __dt_in_h:
+                    self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1] - max(0,
+                                                                                            _prod - _cons - self.maxFeedIn * __dt_in_h) / self.qVeh * 100
+                else:
+                    self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1]
 
-                if self.date_a[i].hour == self.hDailyCons and self.date_a[i+1].hour > self.hDailyCons: # first time hour matches configured time (if hDailyCons= 13, then 13:55
+                if self.date_a[i].hour == self.hDailyCons and self.date_a[i + 1].hour > self.hDailyCons:  # first time hour matches configured time (if hDailyCons= 13, then 13:55
                     deltaSOC = self.getDailyCons(self.date_a[i])
                     self.minSOCVeh_a[i] += deltaSOC
                     self.maxSOCVehProdChrg_a[i] += deltaSOC
@@ -133,10 +160,10 @@ class PredictionClass:
 
                 self.minSOCVeh_a[i] = min(80, self.minSOCVeh_a[i])
                 self.maxSOCVehProdChrg_a[i] = min(90, self.maxSOCVehProdChrg_a[i])
-                self.maxSOCVehExcessChrg_a[i] = min(95, self.maxSOCVehExcessChrg_a[i])
+                self.maxSOCVehExcessChrg_a[i] = min(93, self.maxSOCVehExcessChrg_a[i])
 
                 self.minSOCVeh_a[i] = max(50, self.minSOCVeh_a[i])
-                self.maxSOCVehProdChrg_a[i] = max(40, self.maxSOCVehProdChrg_a[i])
+                self.maxSOCVehProdChrg_a[i] = max(15, self.maxSOCVehProdChrg_a[i])
                 self.maxSOCVehExcessChrg_a[i] = max(30, self.maxSOCVehExcessChrg_a[i])
 
             # print(self.date_a[i])
@@ -187,7 +214,6 @@ class PredictionClass:
 
         dateDay_a_ts = [self.toTimestamp(__Date_a[n]) for n in range(0, len(__Date_a))]
         while timeExtrpDays <= __Date_a[-1]:
-
             timeExtrpDays_ts = self.toTimestamp(timeExtrpDays)
             tempRClouds = interpolate.interp1d(dateDay_a_ts, __RClouds_a)(timeExtrpDays_ts)
             temptEnv = interpolate.interp1d(dateDay_a_ts, __TEnv_a)(timeExtrpDays_ts)

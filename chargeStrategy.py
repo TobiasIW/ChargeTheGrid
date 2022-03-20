@@ -64,19 +64,28 @@ class chargeStrategy:
 
                 if myCar.SOC > maxSOCVehExcessChrg: # above upper limit for prediction based smart charging. only charge if otherwise, power would be cut
                     if homeData.SOC > 97:
-                        pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn
+                        if int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn >0:
+                            pwrAvl = max(int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn, 6*230+1)
+                        else:
+                            pwrAvl=0
+                        #pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn
                         flgAllow1P = True
                     else:
                         pwrAvl = 0
                 else:
+                    if homeData.SOC >= minSOCHomeExcessCharge:
+                        pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) + min(-pred.maxBattPowDischa, max((
+                                homeData.SOC - minSOCHomeExcessCharge) * 500, - pred.maxBattPowChrg))
+                    else:
+                        if int(homeData.Prod) > int(homeData.Cons_home) and int(homeData.Batt_pow) == 0:
+                            pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) -100
+                        else:
+                            pwrAvlExcChrg = max(0, int(homeData.Prod) - int(homeData.Cons_home) - pred.maxBattPowChrg -100)
 
-                    pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) + min(-pred.maxBattPowDischa, max((
-                                homeData.SOC - minSOCHomeExcessCharge - 1) * 500, - pred.maxBattPowChrg))
                     if myCar.SOC > maxSOCVehProdChrg: # above upper limit for normal smart charging. charge when above minimum house SOC
                         flgAllow1P = True
                         pwrAvl = pwrAvlExcChrg
-                        # if homeData.SOC == 0:
-                           # flgAllow1P = True
+
                     else:
                         if myCar.SOC > minSOCVeh: # above minimum SOC: charge when production is greater than consumption
                             pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) # + max(0, min(3300, (homeData.SOC - 5) * 330))

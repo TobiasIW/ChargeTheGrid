@@ -19,6 +19,9 @@ class chargerClass:
     power = 0
     ip = ""
     nPhases = 2
+    TARGET = 0
+    MIN = 1
+    MAX = 2
 
     def __init__(self, arg_ip):
         self.ip = arg_ip
@@ -65,10 +68,10 @@ class chargerClass:
             Amp = power / 230 / self.nPhases
             self.flg1P = False
         else:
-            if not self.flg1P and power > 230 * 6 * self.nPhases:
+            if not self.flg1P and power >= 230 * 6 * self.nPhases:
                 Amp = power / 230 / self.nPhases
             else:
-                if flgAllw1P and power > 230 * 6:
+                if flgAllw1P and power >= 230 * 6:
                     Amp = power / 230
                     self.flg1P = True
                 else:

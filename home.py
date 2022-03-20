@@ -16,7 +16,6 @@ class homeData:
     def update(self, charger):
         response = requests.get(f"http://192.168.178.100:8080/api/v1/status")
         self.SOC=response.json()["USOC"]
-        self.SOC=response.json()["USOC"]
         self.Prod=response.json()["Production_W"]
         self.Cons=response.json()["Consumption_W"]
         self.Batt_pow=response.json()["Pac_total_W"]
