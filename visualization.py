@@ -9,7 +9,6 @@ import datetime
 import pytz
 
 
-
 class visualizationClass:
     csvname = "/home/pi/Entwicklung/bat_stats.csv"
     exec_delta = 1 / 60  # time between scheduled execution in h
@@ -34,8 +33,6 @@ class visualizationClass:
     stChargeMode_a = []
     flgAuto_a = []
     Car_SOC_a = []
-
-
 
     def readVal(self, Attr):
 
@@ -63,7 +60,7 @@ class visualizationClass:
                  'SOC_Car': myCar.SOC})
             data = csv.reader(open(self.csvname, 'r'))
 
-            i = len(self.x) - 1#
+            i = len(self.x) - 1  #
 
             self.SOC_a.append(homeData.SOC)
             self.Prod_a.append(homeData.Prod)
@@ -84,10 +81,11 @@ class visualizationClass:
             if i > 2:
                 time_delta = self.Time_a[-1] - self.Time_a[-2]
                 self.exec_delta = (time_delta.total_seconds() / 3600)
-                self.Consumption.append(self.Consumption[- 1] + self.Cons_a[-1]  * self.exec_delta / 1000)
+                self.Consumption.append(self.Consumption[- 1] + self.Cons_a[-1] * self.exec_delta / 1000)
                 self.Production.append(self.Production[- 1] + self.Prod_a[-1] * self.exec_delta / 1000)
                 self.FeedIn.append(self.FeedIn[- 1] + self.FeedIn_pow * self.exec_delta / 1000)
-                self.Grid_Consumption.append(self.Grid_Consumption[-1] + self.Grid_Consumption_pow * self.exec_delta / 1000)
+                self.Grid_Consumption.append(
+                    self.Grid_Consumption[-1] + self.Grid_Consumption_pow * self.exec_delta / 1000)
 
             else:
                 self.Consumption.append(homeData.Cons * self.exec_delta / 1000)
@@ -178,7 +176,7 @@ class visualizationClass:
         ti = [pd.to_datetime(d) for d in self.Time_a]
         # print(ti)
         # defining subplots and their positions
-        #fig = plt.figure(figsize=(18, 15))
+        # fig = plt.figure(figsize=(18, 15))
         plt1 = plt.subplot2grid((34, 4), (0, 0), rowspan=8, colspan=2)
         plt2 = plt.subplot2grid((34, 4), (10, 0), rowspan=5, colspan=2)
         plt3 = plt.subplot2grid((34, 4), (17, 0), rowspan=6, colspan=2)
@@ -188,7 +186,6 @@ class visualizationClass:
         plt1_2 = plt.subplot2grid((34, 4), (0, 2), rowspan=8, colspan=2)
         plt2_2 = plt.subplot2grid((34, 4), (10, 2), rowspan=5, colspan=2)
         plt.subplots_adjust(hspace=2, wspace=0)
-
 
         # plotting the points
         __endofday = datetime.datetime.now().replace(hour=23, minute=59, second=59)
@@ -297,10 +294,11 @@ class visualizationClass:
         # plt3.grid()
         # plt.tight_layout()
         plt.savefig("/home/pi/Entwicklung/graph.png")
-        plt.savefig("/home/pi/Entwicklung/graph.svg", format = "svg")
-
+        plt.savefig("/home/pi/Entwicklung/graph.svg", format="svg")
+        os.system("sudo cp /home/pi/Entwicklung/graph.svg /var/www/html/graph.svg")
+        os.system("cp /var/www/html/input.txt /home/pi/Entwicklung")
         # plt.savefig("/var/www/html/graph.png")
-        #plt.show()
+        # plt.show()
         # html_str = mpld3.fig_to_html(fig)
         # Html_file = open("index.html", "w")
         # Html_file.write(html_str)

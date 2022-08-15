@@ -1,0 +1,303 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <title>Batteriezustand</title>
+
+  </head>
+  <body>
+        <img src="graph.svg" alt="graph" class="floating_element"/><br />
+        
+	<a href="graphs"> ältere Diagramme</a><br />
+	<a href="bedingungen.html">Bedingungen</a><br />
+	<form action="writer.php"method="post">
+
+</form>
+<form name ="myForm">
+    <input type="radio" name="choice" onChange="ajaxFunction();" value="0"> 0: Dauer-Aus<br />
+    <input type="radio" name="choice" onChange="ajaxFunction();" value="1"> 1: Dauer-An<br />
+    <input type="radio" name="choice" onChange="ajaxFunction();" value="5"> 5: Manuelle Steuerung (über App oder Button)<br />
+    <input type="radio" name="choice" onChange="ajaxFunction();" value="6"> 6: Automatik (vormittags Hoch-Prio, Nachmittags Normal, nachts niedrige Prio)<br />
+	Status <input type='text' name='status' />
+</form>
+<br>
+<!--
+   <button onclick="getJson();">
+        read JSON
+    </button>
+	<button onclick="json2Fields();">
+        Add Fields
+    </button>
+    -->
+    </button>
+	<button onclick="addEmptyLine()">
+        Zeile Hinzufügen
+    </button>
+    </button>
+	<button onclick="createJson()">
+        Speichern
+    </button>
+Hinweis: zum löschen einer Zeile km-Feld leeren/leer lassen.
+    <br>
+    
+<div id="kmPlanner"></div>
+    <br>
+    
+<textarea id="kmArea_id" name="kmArea" rows="4" cols="50"></textarea>	
+
+ 
+<!-- <script type="text/javascript" src="dailyCons.jsonp"></script> -->
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script language="javascript" type="text/javascript">
+<!-- 
+//Browser Support Code
+//============================
+//global variables
+var nElements=0;
+getJson();
+function clearFields()
+{
+	// get elements
+
+	var parent = document.getElementById("kmPlanner");
+	for (let i = 1; i <= nElements; i++)
+	{
+		child=document.getElementById("Date_" + i);
+		parent.removeChild(child);
+		child=document.getElementById("km_" + i).value;
+		parent.removeChild(child);
+		child=document.getElementById("tiStart_" + i).value;
+		parent.removeChild(child);
+		child=document.getElementById("tiEnd_" + i).value;
+		parent.removeChild(child);
+	}
+
+}
+function addEmptyLine()
+{
+	nElements=nElements+1;
+	addField(nElements, new Date().toJSON().slice(0, 10), "")
+}
+function changeContent() {
+
+            var x = document.getElementById('kmArea_id');
+            x.value = "test";
+        }
+		
+function json2Fields(){
+
+var json = document.getElementById('kmArea_id').value;//$.getJSON("http://tweiberle.selfhost.co/dailyCons.json")
+
+var mydata = JSON.parse(json); 
+//alert(JSON.stringify(mydata));
+//alert(mydata.consumption.length)
+	for (let i = 0; i < mydata.consumption.length; i++)       {
+		//alert(i + ": " + mydata.consumption[i].date + " / " + mydata.consumption[i].km );
+		addField(i + 1, mydata.consumption[i].date, mydata.consumption[i].km)
+		nElements = i+1;
+	}
+ 
+ 
+ //alert("stringify: " + JSON.stringify(mydata));
+}
+function createJson()
+{
+	dailyCons = {	"consumption": []	};	
+	for (let i = 1; i <= nElements; i++)
+	{
+		date=document.getElementById("Date_" + i).value;
+		km=document.getElementById("km_" + i).value;
+		tiStart=document.getElementById("tiStart_" + i).value;
+		tiEnd=document.getElementById("tiEnd_" + i).value;
+		dayData={ date: date,
+			km: km,
+			StartTime: tiStart,
+			EndTime: tiEnd
+		};
+		if (dayData.km != "")
+		{
+			dailyCons.consumption.push(dayData);
+		}
+
+	}
+	//alert(JSON.stringify(dailyCons));
+	writeJson(JSON.stringify(dailyCons));
+	
+}
+function addField(id, arg_date, km) {
+	//alert("test_addfield");
+	//Create an input type dynamically.
+	var txtDate = document.createElement("input");
+	var txtKm = document.createElement("input");
+	var txtStartTime = document.createElement("input");
+	var txtEndTime = document.createElement("input");
+	//Create Labels
+	var label = document.createElement("Label");
+	label.innerHTML = "<br>Element " + id + "(Datum/km): " ;     
+	//alert("test_addfield1");
+
+	//Assign different attributes to the element.
+	txtDate.setAttribute("type", "date");
+	//alert("test_addfield3");
+	txtDate.setAttribute("value", arg_date);
+	//alert("test_addfield4");
+	txtDate.setAttribute("id", "Date_" + id);
+	txtDate.setAttribute("style", "width:130px");
+	//alert("test_addfield5");
+	txtKm.setAttribute("type", "text");
+	txtKm.setAttribute("value", km);
+	txtKm.setAttribute("id", "km_" + id);
+	txtKm.setAttribute("style", "width:50px");
+	
+	txtStartTime.setAttribute("type", "time");
+	txtStartTime.setAttribute("value", "08:00" );
+	txtStartTime.setAttribute("id", "tiStart_" + id);
+	txtStartTime.setAttribute("style", "width:80px");
+	
+	txtEndTime.setAttribute("type", "time");
+	txtEndTime.setAttribute("value", "08:00" );
+	txtEndTime.setAttribute("id", "tiEnd_" + id);
+	txtEndTime.setAttribute("style", "width:80px");
+	
+	label.setAttribute("style", "font-weight:normal");
+	//alert("test_addfield6");
+	// 'foobar' is the div id, where new fields are to be added
+	var foo = document.getElementById("kmPlanner");
+
+	//Append the element in page (in span).
+	foo.appendChild(label);
+	foo.appendChild(txtDate);
+	foo.appendChild(txtKm);
+	foo.appendChild(txtStartTime);
+	foo.appendChild(txtEndTime);
+} 
+function ajaxFunction(){
+	var ajaxRequest;  // The variable that makes Ajax possible!
+	
+	try{
+		// Opera 8.0+, Firefox, Safari
+		ajaxRequest = new XMLHttpRequest();
+	} catch (e){
+		// Internet Explorer Browsers
+		try{
+			ajaxRequest = new ActiveXObject("Msxml2.XMLHTTP");
+		} catch (e) {
+			try{
+				ajaxRequest = new ActiveXObject("Microsoft.XMLHTTP");
+			} catch (e){
+				// Something went wrong
+				alert("Your browser broke!");
+				return false;
+			}
+		}
+	}
+	// Create a function that will receive data sent from the server
+	ajaxRequest.onreadystatechange = function(){
+		if(ajaxRequest.readyState == 4){
+			document.myForm.status.value = ajaxRequest.responseText;
+			var x = document.getElementById('kmArea_id');
+			x.value = ajaxRequest.responseText;
+			
+		}
+	}
+	const rbs = document.querySelectorAll('input[name="choice"]');
+	    let selectedValue;
+	    for (const rb of rbs) {
+	        if (rb.checked) {
+	            selectedValue = rb.value;
+	            break;
+	        }
+	    }
+	ajaxRequest.open("GET", "writer.php?val=" + selectedValue, true);
+	ajaxRequest.send("test"); 
+}
+function getJson(){
+	var ajaxRequest;  // The variable that makes Ajax possible!
+	
+	try{
+		// Opera 8.0+, Firefox, Safari
+		ajaxRequest = new XMLHttpRequest();
+	} catch (e){
+		// Internet Explorer Browsers
+		try{
+			ajaxRequest = new ActiveXObject("Msxml2.XMLHTTP");
+		} catch (e) {
+			try{
+				ajaxRequest = new ActiveXObject("Microsoft.XMLHTTP");
+			} catch (e){
+				// Something went wrong
+				alert("Your browser broke!");
+				return false;
+			}
+		}
+	}
+	// Create a function that will receive data sent from the server
+	ajaxRequest.onreadystatechange = function(){
+		if(ajaxRequest.readyState == 4){
+			document.myForm.status.value = ajaxRequest.responseText;
+			var x = document.getElementById('kmArea_id');
+			x.value = ajaxRequest.responseText;
+			 json2Fields()
+		}
+	}
+	
+	ajaxRequest.open("GET", "json_reader.php?val=1", true);
+	ajaxRequest.send("test"); 
+
+}
+function writeJson(jsonString){
+	var ajaxRequest;  // The variable that makes Ajax possible!
+	
+	try{
+		// Opera 8.0+, Firefox, Safari
+		ajaxRequest = new XMLHttpRequest();
+	} catch (e){
+		// Internet Explorer Browsers
+		try{
+			ajaxRequest = new ActiveXObject("Msxml2.XMLHTTP");
+		} catch (e) {
+			try{
+				ajaxRequest = new ActiveXObject("Microsoft.XMLHTTP");
+			} catch (e){
+				// Something went wrong
+				alert("Your browser broke!");
+				return false;
+			}
+		}
+	}
+	// Create a function that will receive data sent from the server
+	ajaxRequest.onreadystatechange = function(){
+		if(ajaxRequest.readyState == 4){
+			document.myForm.status.value = ajaxRequest.responseText;
+			location.reload();
+			
+		}
+	}
+	
+	ajaxRequest.open("GET", "json_writer.php?val=" + jsonString, true);
+	ajaxRequest.send("test");
+}
+</script>
+
+
+<script type='text/javascript'>
+$('#btnwrite').click(function(){
+  alert('test');
+ $.post('writer.php', { text: "sample text", function(data) { 
+      // output response to console
+      console.log(data); 
+ }});
+});
+</script>
+  </body>
+
+
+
+</html>
+
+

@@ -28,7 +28,10 @@ class chargerClass:
         self.flg1P = False
     def updateVals(self):
         print("1")
-        response = requests.get(f"http://" + self.ip + "/api/status?filter=car,nrg")
+        try:
+            response = requests.get(f"http://" + self.ip + "/api/status?filter=car,nrg")
+        except Exception as e:
+            print(e)
         # print("1")
         # print(self.ip)
         # print(response)
@@ -39,7 +42,10 @@ class chargerClass:
         print(self.power)
 
     def getVal(self, attribute):
-        response = requests.get(f"http://" + self.ip + "/api/status?filter=" + attribute)
+        try:
+            response = requests.get(f"http://" + self.ip + "/api/status?filter=" + attribute)
+        except Exception as e:
+            print(e)
         val = response.json()[attribute]
         return val
 
@@ -51,7 +57,10 @@ class chargerClass:
     def setVal(self, attribute, value):
         # print("setValCalled",attribute,value)
         # print(f"http://"+self.ip+"/api/set?"+attribute+"="+value)
-        response = requests.get(f"http://" + self.ip + "/api/set?" + attribute + "=" + value)
+        try:
+            response = requests.get(f"http://" + self.ip + "/api/set?" + attribute + "=" + value)
+        except Exception as e:
+            print(e)
 
     def stopCharge(self):
         print("stop")
