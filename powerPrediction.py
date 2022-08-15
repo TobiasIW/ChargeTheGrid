@@ -48,6 +48,7 @@ class PredictionClass:
         self.city = LocationInfo("Vaihingen", "Germany", "Europe/Berlin", self.latitude, self.longitude)
         self.date_predHomeSOC_a = []
         self.predHomeSOC_a = []
+        self.jDailyCons=[]
 
     def getPower(self, date, rClouds):
         azimuth = Location(self.city).solar_azimuth(date)
@@ -64,8 +65,8 @@ class PredictionClass:
             c = c0 + rClouds * 0.63
             # print("c=" + str(c))
             E = E0 * math.exp(-c / (math.cos(zenith * 2 * math.pi / 360)))
-            print("E: " + str(E))
-            print("zenith:" + str(zenith))
+            #print("E: " + str(E))
+            #print("zenith:" + str(zenith))
             try:
                 pwrDiff = np.sum(interpolate.interp1d(self.anglZenithPwrDiff_a, self.pwrDiff_a)(zenith) * self.pwrPeak) # diffuse power
             except Exception as e:
@@ -77,25 +78,13 @@ class PredictionClass:
             power = 0
         return power
 
-    def getDailyCons(self, arg_date):
-        with open(self.dailyConsPath, 'r') as f:
-            data = f.read()
 
-        jDailyCons = json.loads(data)
-        cons = 0.150 * self.consPer100km
-        for day in jDailyCons['consumption']:
-
-            if arg_date.strftime("%Y-%m-%d") == day["date"]:
-                date = day["date"]
-                cons = float(day["km"]) * self.consPer100km / 100
-
-        # print("Day: "+str(date)+", Cons: "+str(cons))
-        return cons / self.qVeh * 100
 
     def updateSOCLims(self, home):
         minSOC_Start = 100
         maxSOC_Start = 100
         i = 0
+        self.loadDailyCons()
         self.date_predHomeSOC_a = []
         self.predHomeSOC_a = []
         self.date_predHomeSOC_a.append(self.berlin.localize(datetime.datetime.now()))
@@ -168,22 +157,45 @@ class PredictionClass:
                 self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt / self.qVeh * 100
                 self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1] - _qCutOff / self.qVeh * 100
 
-                if self.date_a[i].hour == self.hDailyCons and self.date_a[i + 1].hour > self.hDailyCons:  # first time hour matches configured time (if hDailyCons= 13, then 13:55
-                    deltaSOC = self.getDailyCons(self.date_a[i])
-                    self.minSOCVeh_a[i] += deltaSOC
-                    self.maxSOCVehProdChrg_a[i] += deltaSOC
-                    self.maxSOCVehExcessChrg_a[i] += deltaSOC
+                #if self.date_a[i].hour == self.hDailyCons and self.date_a[i + 1].hour > self.hDailyCons:  # first time hour matches configured time (if hDailyCons= 13, then 13:55
+                deltaSOC = self.getDailyCons(self.date_a[i], self.date_a[i+1])
+                self.minSOCVeh_a[i] += deltaSOC
+                self.maxSOCVehProdChrg_a[i] += deltaSOC
+                self.maxSOCVehExcessChrg_a[i] += deltaSOC
 
-                self.minSOCVeh_a[i] = min(80, self.minSOCVeh_a[i])
-                self.maxSOCVehProdChrg_a[i] = min(85, self.maxSOCVehProdChrg_a[i])
-                self.maxSOCVehExcessChrg_a[i] = min(93, self.maxSOCVehExcessChrg_a[i])
+                self.minSOCVeh_a[i] = self.lim(self.minSOCVeh_a[i], 50, 80)
+                self.maxSOCVehProdChrg_a[i] = self.lim(self.maxSOCVehProdChrg_a[i], 15, 85)
+                self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, 93)
 
-                self.minSOCVeh_a[i] = max(50, self.minSOCVeh_a[i])
-                self.maxSOCVehProdChrg_a[i] = max(15, self.maxSOCVehProdChrg_a[i])
-                self.maxSOCVehExcessChrg_a[i] = max(45, self.maxSOCVehExcessChrg_a[i])
 
             # print(self.date_a[i])
             # print("min: " + str(self.minSOC_a[i]) + " / max:" + str(self.maxSOC_a[i]))
+    def loadDailyCons(self):
+        with open(self.dailyConsPath, 'r') as f:
+            data = f.read()
+        self.jDailyCons = json.loads(data)
+
+    def getDailyCons(self, arg_date, arg_dateOld):
+        cons = 0
+        if arg_date.hour == self.hDailyCons and arg_dateOld.hour > self.hDailyCons:
+            cons = 0.150 * self.consPer100km
+        for day in self.jDailyCons['consumption']:
+            try:
+                jsonDate = datetime.datetime.strptime(day["date"] + " " + day["StartTime"], '%Y-%m-%d %H:%M')
+            except Exception as e:
+                print(e)
+            jsonDateLoc = self.berlin.localize(jsonDate)
+            if arg_date <= jsonDateLoc < arg_dateOld:
+                cons = float(day["km"]) * self.consPer100km / 100
+
+        # print("Day: "+str(date)+", Cons: "+str(cons))
+        return cons / self.qVeh * 100
+
+    def isPluggedIn(self, date):
+        a=1
+
+    def lim(self, val, lowLim, upLim):
+        return min(upLim, max(lowLim, val))
 
     def updatePrediction(self):
         self.powProd_a = []
@@ -240,24 +252,24 @@ class PredictionClass:
         dateDay_a_ts = [self.toTimestamp(__Date_a[n]) for n in range(0, len(__Date_a))]
         while timeExtrpDays <= __Date_a[-1]:
             timeExtrpDays_ts = self.toTimestamp(timeExtrpDays)
-            print("test0")
+            # print("test0")
             tempRClouds = interpolate.interp1d(dateDay_a_ts, __RClouds_a)(timeExtrpDays_ts)
-            print("test1")
+            # print("test1")
             temptEnv = interpolate.interp1d(dateDay_a_ts, __TEnv_a)(timeExtrpDays_ts)
-            print("test2")
+            # print("test2")
             powProd = self.getPower(timeExtrpDays, tempRClouds)
-            print("test3")
+            # print("test3")
             powCons = self.getPowCons(temptEnv, tempRClouds, timeExtrpDays)
-            print("test4")
+            # print("test4")
             self.powProd_a.append(powProd)
             self.powCons_a.append(powCons)
 
             self.date_a.append(timeExtrpDays)
             timeExtrpDays = timeExtrpDays + datetime.timedelta(minutes=5)
-            print(timeExtrpDays)
-            print(timeExtrpDays_ts)
-        print(self.date_a)
-        print(__Date_a)
+            # print(timeExtrpDays)
+            # print(timeExtrpDays_ts)
+        # print(self.date_a)
+        # print(__Date_a)
 
     def toTimestamp(self, d):
         return d.timestamp()
