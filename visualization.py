@@ -223,28 +223,33 @@ class visualizationClass:
         plt1.plot(ti, self.GridFeedIn_pow_a, label="Einspeisung(+)/Bezug(-)", linewidth="0.5")
         plt1.plot(ti, self.ConsHome_a, label="Verbr. o. WB", linewidth="0.5")
         plt1.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
+        plt1.plot(pred.date_a, pred.powProdLow_a, 'tab:brown', label="präd. Produktion Min.", linewidth="0.5")
         plt1.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
+
         plt1_2.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
+        plt1_2.plot(pred.date_a, pred.powProdLow_a, 'tab:brown', label="präd. Produktion Min.", linewidth="0.5")
         plt1_2.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
 
         plt2.plot(ti, self.SOC_a, label="SOC", linewidth="0.5")
         plt2.plot(ti, self.Car_SOC_a, label="SOC_Auto", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.minSOCHome_a, '--', label="min. SOC Haus", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.maxSOCHome_a, '--', label="max. SOC Haus", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.minSOCVeh_a, '--', label="Min SOC Veh High Prio", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, '--', label="Min SOC Veh Überschuss", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, '--', label="Min SOC Veh Abriegeln", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.minSOCHome_a, 'r', label="min. SOC HausMin", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.minSOCHomeLowProd_a, 'r--', label="min. SOC Haus Max", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.maxSOCHome_a, 'c--', label="max. SOC Haus", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln", linewidth="0.5")
 
         plt2.annotate("{:10.0f}".format(self.SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.SOC_a[i - 2]),
                       horizontalalignment="right")
         plt2.annotate("{:10.0f}".format(self.Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.Car_SOC_a[i - 2]),
                       horizontalalignment="right")
 
-        plt2_2.plot(pred.date_a, pred.minSOCHome_a, '--', label="min. SOC Haus")
-        plt2_2.plot(pred.date_a, pred.maxSOCHome_a, '--', label="max. SOC Haus")
-        plt2_2.plot(pred.date_a, pred.minSOCVeh_a, '--', label="Min SOC Veh High Prio")
-        plt2_2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, '--', label="Min SOC Veh Überschuss")
-        plt2_2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, '--', label="Min SOC Veh Abriegeln")
+        plt2_2.plot(pred.date_a, pred.minSOCHome_a, 'r', label="min. SOC Haus")
+        plt2_2.plot(pred.date_a, pred.minSOCHomeLowProd_a, 'r--', label="min. SOC Haus")
+        plt2_2.plot(pred.date_a, pred.maxSOCHome_a, 'c--', label="max. SOC Haus")
+        plt2_2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio")
+        plt2_2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss")
+        plt2_2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln")
 
         plt3.plot(ti, self.Consumption, label="Verbrauch")
         plt3.plot(ti, self.Production, label="Produktion")

@@ -37,9 +37,11 @@ class PredictionClass:
         self.pwrDiff_a = [0, 0.04, 0.06, 0.07]
         self.dailyConsPath = "/home/pi/Entwicklung/dailyCons.json"
         self.powProd_a = []
+        self.powProdLow_a = []
         self.powCons_a = []
         self.date_a = []
         self.minSOCHome_a = []
+        self.minSOCHomeLowProd_a = []
         self.minSOCHome_C = 4
         self.maxSOCHome_a = []
         self.minSOCVeh_a = []
@@ -107,6 +109,7 @@ class PredictionClass:
         n = len(self.powProd_a) - 1
         n_1 = n + 1
         self.minSOCHome_a = [0] * n_1
+        self.minSOCHomeLowProd_a = [0] * n_1
         self.maxSOCHome_a = [0] * n_1
 
         self.minSOCVeh_a = [0] * n_1
@@ -117,6 +120,8 @@ class PredictionClass:
         for i in range(n, -1, -1):
             if i == n:  # or self.date_a[i].hour == 0:
                 self.minSOCHome_a[i] = minSOC_Start
+                self.minSOCHomeLowProd_a[i] = minSOC_Start
+
                 self.maxSOCHome_a[i] = maxSOC_Start
 
                 self.minSOCVeh_a[i] = self.minSOCVehTar
@@ -128,18 +133,27 @@ class PredictionClass:
                 __dt_in_h = __timediff.total_seconds() / 3600
                 # print("timediff in h: "+str(__timediff_in_h))
                 _prod = (self.powProd_a[i] + self.powProd_a[i + 1]) / 2 * __dt_in_h
+                _prodLow = (self.powProdLow_a[i] + self.powProdLow_a[i + 1]) / 2 * __dt_in_h
                 _cons = (self.powCons_a[i] + self.powCons_a[i + 1]) / 2 * __dt_in_h
                 _qExcess = _prod - _cons
+                _qExcessLow = _prodLow - _cons
                 _qExcessLim = max(self.maxBattPowDischa * __dt_in_h,
                                   min(self.maxBattPowChrg * __dt_in_h, _qExcess) * 0.9)
+                _qExcessLimLow = max(self.maxBattPowDischa * __dt_in_h,
+                                  min(self.maxBattPowChrg * __dt_in_h, _qExcessLow) * 0.9)
                 _qExcessOvrBattLim = max(0, _qExcess - _qExcessLim)
 
                 self.minSOCHome_a[i] = self.minSOCHome_a[i + 1] - _qExcessLim / self.qBatt * 100
+                self.minSOCHomeLowProd_a[i] = self.minSOCHomeLowProd_a[i + 1] - _qExcessLimLow / self.qBatt * 100
+
                 _qExcessBatt = -min(0, (self.minSOCHome_a[i] - self.minSOCHome_C) * self.qBatt / 100) + _qExcessOvrBattLim
                 if (Location(self.city).solar_elevation(self.date_a[i]) > 0) and (Location(self.city).solar_elevation(
                         self.date_a[i + 1]) <= 0):
                     self.minSOCHome_a[i] = 100 # reset SOC to max at sunset
+                    self.minSOCHomeLowProd_a[i] = 100 # reset SOC to max at sunset
+
                 self.minSOCHome_a[i] = min(97, max(self.minSOCHome_C, self.minSOCHome_a[i]))
+                self.minSOCHomeLowProd_a[i] = min(97, max(self.minSOCHome_C, self.minSOCHomeLowProd_a[i]))
 
                 self.maxSOCHome_a[i] = self.maxSOCHome_a[i + 1] - (
                         _qExcess - self.maxFeedIn * __dt_in_h) / self.qBatt * 100
@@ -170,6 +184,7 @@ class PredictionClass:
 
             # print(self.date_a[i])
             # print("min: " + str(self.minSOC_a[i]) + " / max:" + str(self.maxSOC_a[i]))
+
     def loadDailyCons(self):
         with open(self.dailyConsPath, 'r') as f:
             data = f.read()
@@ -199,6 +214,7 @@ class PredictionClass:
 
     def updatePrediction(self):
         self.powProd_a = []
+        self.powProdLow_a = []
         self.powCons_a = []
         self.date_a = []
         __Date_a = []
@@ -262,6 +278,8 @@ class PredictionClass:
             powCons = self.getPowCons(temptEnv, tempRClouds, timeExtrpDays)
             # print("test4")
             self.powProd_a.append(powProd)
+            self.powProdLow_a.append(powProd/2)
+
             self.powCons_a.append(powCons)
 
             self.date_a.append(timeExtrpDays)
