@@ -232,7 +232,7 @@ class visualizationClass:
 
         plt2.plot(ti, self.SOC_a, label="SOC", linewidth="0.5")
         plt2.plot(ti, self.Car_SOC_a, label="SOC_Auto", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.minSOCHome_a, 'r', label="min. SOC HausMin", linewidth="0.5")
+        plt2.plot(pred.date_a, pred.minSOCHome_a, 'r', label="min. SOC Haus Min", linewidth="0.5")
         plt2.plot(pred.date_a, pred.minSOCHomeLowProd_a, 'r--', label="min. SOC Haus Max", linewidth="0.5")
         plt2.plot(pred.date_a, pred.maxSOCHome_a, 'c--', label="max. SOC Haus", linewidth="0.5")
         plt2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio", linewidth="0.5")

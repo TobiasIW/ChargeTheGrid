@@ -18,10 +18,13 @@ from dataclasses import dataclass
 
 
 class chargeStrategy:
-    limAlwaysOn = 65
-    limHigh = 95
-    limNorm = 95
-    limLow = 100
+    def __init__(self, home):
+        self.tiLastCharge = datetime.datetime.now()
+        self.ratSOCTar = home.SOC
+        self.flgSOCHoldActv = False
+
+    def toTimestamp(self, d):
+        return d.timestamp()
 
     def calcStrategy(self, homeData, csvname, charger, myCar, pred):
 
@@ -47,6 +50,11 @@ class chargeStrategy:
 
         homeData.stChargeMode = stChargeMode
 
+
+        if charger.power > 0:
+            self.tiLastCharge = datetime.datetime.now()
+
+
         flgAllow1P = False
         if stChargeMode == OFF:
             pwrAvl = 0
@@ -58,8 +66,35 @@ class chargeStrategy:
                 dateDay_a_ts = [pred.toTimestamp(pred.date_a[n]) for n in range(0, len(pred.date_a))]
                 minSOCVeh = interpolate.interp1d(dateDay_a_ts, pred.minSOCVeh_a)(timeNow_ts)
                 maxSOCVehProdChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehProdChrg_a)(timeNow_ts)
+
                 maxSOCVehExcessChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehExcessChrg_a)(timeNow_ts)
-                minSOCHomeExcessCharge = interpolate.interp1d(dateDay_a_ts, pred.minSOCHome_a)(timeNow_ts)
+                minSOCHomeExcessChargeMin = interpolate.interp1d(dateDay_a_ts, pred.minSOCHome_a)(timeNow_ts)
+                minSOCHomeExcessChargeMax = interpolate.interp1d(dateDay_a_ts, pred.minSOCHomeLowProd_a)(timeNow_ts)
+                if myCar.SOC < maxSOCVehProdChrg:
+                    minSOCHomeExcessCharge = minSOCHomeExcessChargeMin
+                else:
+                    minSOCHomeExcessCharge = minSOCHomeExcessChargeMin + (minSOCHomeExcessChargeMax - minSOCHomeExcessChargeMin) * (myCar.SOC - maxSOCVehProdChrg)/(maxSOCVehExcessChrg - maxSOCVehProdChrg)
+
+                print("minSOCHomeExcessChargeMin: " + str(minSOCHomeExcessChargeMin))
+                print("minSOCHomeExcessChargeMax: " + str(minSOCHomeExcessChargeMax))
+                print("minSOCHomeExcessCharge: " + str(minSOCHomeExcessCharge))
+
+                # SOC Hold State machine
+                if not self.flgSOCHoldActv and charger.power > 0:
+                    self.flgSOCHoldActv = True
+                    self.ratSOCTar = homeData.SOC
+                if not charger.flgPluggedIn:
+                    self.flgSOCHoldActv = False
+                if self.tiLastCharge + datetime.timedelta(hours=1) < datetime.datetime.now():
+                    self.flgSOCHoldActv = False
+
+                if self.tiLastCharge + datetime.timedelta(hours=1) < datetime.datetime.now():
+                    self.flgSOCHoldActv = False
+
+                if abs(homeData.SOC-self.ratSOCTar)>=3:
+                        self.ratSOCTar = homeData.SOC
+
+                print("ratSOCTar:" + str(self.ratSOCTar))
                 print("minSOC:" + str(minSOCVeh))
                 if homeData.SOC > 97:
                     if int(homeData.Prod) - int(homeData.Cons_home) + int(homeData.Batt_pow) - pred.maxFeedIn > 0:
@@ -80,10 +115,15 @@ class chargeStrategy:
                 else:
                     if (int(homeData.Prod) > int(homeData.Cons_home)) and (abs(int(homeData.Batt_pow)) < 10):
                         pwrAvlExcChrg_BattOff = int(homeData.Prod) - int(homeData.Cons_home) - 100
-                    pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) + min(-pred.maxBattPowDischa,
-                        max((homeData.SOC - minSOCHomeExcessCharge) * 500, - pred.maxBattPowChrg))
+                    if self.flgSOCHoldActv:
+                        pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) + min(-pred.maxBattPowDischa,
+                            max((homeData.SOC - self.ratSOCTar) * 500, - pred.maxBattPowChrg))
+                    else:
+                        pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) + min(-pred.maxBattPowDischa,
+                            max((homeData.SOC - minSOCHomeExcessCharge) * 500, - pred.maxBattPowChrg))
                     __maxChrg = (maxSOCVehExcessChrg - myCar.SOC) * 5000
                     pwrAvlExcChrg_HomeSuff = min(pwrAvlExcChrg, __maxChrg)
+
                     if homeData.SOC < minSOCHomeExcessCharge:
                         pwrAvlExcChrg_Min = max(0, int(homeData.Prod) - int(homeData.Cons_home) - pred.maxBattPowChrg - 100)
 

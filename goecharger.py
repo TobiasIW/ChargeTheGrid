@@ -26,6 +26,7 @@ class chargerClass:
     def __init__(self, arg_ip):
         self.ip = arg_ip
         self.flg1P = False
+        self.flgPluggedIn = False
     def updateVals(self):
         print("1")
         try:
@@ -36,10 +37,16 @@ class chargerClass:
         # print(self.ip)
         # print(response)
         self.state = response.json()["car"]
+        if self.state == 1:
+            self.flgPluggedIn = True
+        else:
+            self.flgPluggedIn = False
         # print("1")
         myList = response.json()["nrg"]
         self.power = myList[11]
         print(self.power)
+
+
 
     def getVal(self, attribute):
         try:

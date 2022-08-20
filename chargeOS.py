@@ -24,7 +24,7 @@ charger = goecharger.chargerClass("192.168.178.201")
 
 # print("test4")
 homeData = home.homeData()
-strategy = chargeStrategy.chargeStrategy()
+strategy = chargeStrategy.chargeStrategy(homeData)
 vis = visualization.visualizationClass()
 myCar = car.carClass(vis)
 pred = powerPrediction.PredictionClass()
