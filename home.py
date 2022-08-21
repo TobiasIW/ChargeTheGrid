@@ -13,9 +13,11 @@ class homeData:
     SwitchActive: float = 0
     stChargeMode: float=0
     flgAuto:float=0
-    def update(self, charger):
+    qBattCap = 8000 # Wh
+    flgIni = True
+    def update(self, charger, dT):
         response = requests.get(f"http://192.168.178.100:8080/api/v1/status")
-        self.SOC=response.json()["USOC"]
+
         self.Prod=response.json()["Production_W"]
         self.Cons=response.json()["Consumption_W"]
         self.Batt_pow=response.json()["Pac_total_W"]
@@ -23,5 +25,11 @@ class homeData:
         self.TimeStamp=response.json()["Timestamp"]
         self.OperatingMode=response.json()["OperatingMode"]
         self.SystemStatus=response.json()["SystemStatus"]
-
+        if self.flgIni:
+            self.SOC = response.json()["USOC"]
+            self.flgIni = False
+        else:
+            __SOCRecd=response.json()["USOC"]
+            self.SOC = self.SOC - self.Batt_pow*dT/3600/self.qBattCap*100
+            self.SOC = self.SOC + (__SOCRecd - self.SOC) * 0.05
         self.Cons_home=self.Cons-charger.power

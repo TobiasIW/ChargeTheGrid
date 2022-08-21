@@ -94,6 +94,8 @@ class chargeStrategy:
                 if abs(homeData.SOC-self.ratSOCTar)>=3:
                         self.ratSOCTar = homeData.SOC
 
+                self.ratSOCTar = max(self.ratSOCTar, minSOCHomeExcessCharge)
+
                 print("ratSOCTar:" + str(self.ratSOCTar))
                 print("minSOC:" + str(minSOCVeh))
                 if homeData.SOC > 97:

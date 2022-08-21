@@ -62,7 +62,7 @@ while True:#
         print ("dT = " + str(dT))
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 20s task###")
         charger.updateVals()
-        homeData.update(charger)
+        homeData.update(charger, dT)
         pred.updateSOCLims(homeData)
         myCar.model(dT, charger)
         homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger, myCar, pred)
