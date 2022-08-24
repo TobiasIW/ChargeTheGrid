@@ -38,9 +38,9 @@ class chargerClass:
         # print(response)
         self.state = response.json()["car"]
         if self.state == 1:
-            self.flgPluggedIn = True
-        else:
             self.flgPluggedIn = False
+        else:
+            self.flgPluggedIn = True
         # print("1")
         myList = response.json()["nrg"]
         self.power = myList[11]

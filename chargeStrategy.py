@@ -80,21 +80,25 @@ class chargeStrategy:
                 print("minSOCHomeExcessCharge: " + str(minSOCHomeExcessCharge))
 
                 # SOC Hold State machine
+                print("hold0 " + str(self.tiLastCharge))
                 if not self.flgSOCHoldActv and charger.power > 0:
                     self.flgSOCHoldActv = True
                     self.ratSOCTar = homeData.SOC
+                    print("hold1 " + str(self.ratSOCTar))
+
                 if not charger.flgPluggedIn:
                     self.flgSOCHoldActv = False
-                if self.tiLastCharge + datetime.timedelta(hours=1) < datetime.datetime.now():
-                    self.flgSOCHoldActv = False
+                    print("hold2 " + str(self.ratSOCTar))
 
                 if self.tiLastCharge + datetime.timedelta(hours=1) < datetime.datetime.now():
                     self.flgSOCHoldActv = False
+                    print("hold3 ")
+
 
                 if abs(homeData.SOC-self.ratSOCTar)>=3:
                         self.ratSOCTar = homeData.SOC
-
-                self.ratSOCTar = max(self.ratSOCTar, minSOCHomeExcessCharge)
+                print("hold5 " + str(self.ratSOCTar))
+                self.ratSOCTar = min(max(self.ratSOCTar, minSOCHomeExcessCharge), 97)
 
                 print("ratSOCTar:" + str(self.ratSOCTar))
                 print("minSOC:" + str(minSOCVeh))

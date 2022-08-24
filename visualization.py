@@ -132,7 +132,7 @@ class visualizationClass:
             i = i + 1
             if i > 1:
 
-                self.SOC_a.append(int(row[0]))
+                self.SOC_a.append(float(row[0]))
                 self.Prod_a.append(int(row[1]))
                 self.Cons_a.append(int(row[2]))
                 self.Batt_pow_a.append(int(row[3]))
