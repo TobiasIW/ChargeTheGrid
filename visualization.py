@@ -7,6 +7,7 @@ import os.path
 import time
 import datetime
 import pytz
+import numpy as np
 
 
 class visualizationClass:
@@ -177,14 +178,18 @@ class visualizationClass:
         # print(ti)
         # defining subplots and their positions
         # fig = plt.figure(figsize=(18, 15))
-        plt1 = plt.subplot2grid((34, 4), (0, 0), rowspan=8, colspan=2)
-        plt2 = plt.subplot2grid((34, 4), (10, 0), rowspan=5, colspan=2)
-        plt3 = plt.subplot2grid((34, 4), (17, 0), rowspan=6, colspan=2)
-        plt4 = plt.subplot2grid((34, 4), (25, 0), rowspan=1, colspan=2)
-        plt5 = plt.subplot2grid((34, 4), (28, 0), rowspan=2, colspan=2)
-        plt6 = plt.subplot2grid((34, 4), (32, 0), rowspan=2, colspan=2)
-        plt1_2 = plt.subplot2grid((34, 4), (0, 2), rowspan=8, colspan=2)
-        plt2_2 = plt.subplot2grid((34, 4), (10, 2), rowspan=5, colspan=2)
+        plt1 = plt.subplot2grid((43, 4), (0, 0), rowspan=8, colspan=2)
+        plt1_2 = plt.subplot2grid((43, 4), (0, 2), rowspan=8, colspan=2)
+        plt2 = plt.subplot2grid((43, 4), (10, 0), rowspan=5, colspan=2)
+        plt2_2 = plt.subplot2grid((43, 4), (10, 2), rowspan=5, colspan=2)
+        plt3 = plt.subplot2grid((43, 4), (17, 0), rowspan=5, colspan=2)
+        plt3_2 = plt.subplot2grid((43, 4), (17, 2), rowspan=5, colspan=2)
+        plt4 = plt.subplot2grid((43, 4), (25, 0), rowspan=6, colspan=2)
+
+        plt5 = plt.subplot2grid((43, 4), (33, 0), rowspan=1, colspan=2)
+        plt6 = plt.subplot2grid((43, 4), (37, 0), rowspan=2, colspan=2)
+        plt7 = plt.subplot2grid((43, 4), (41, 0), rowspan=2, colspan=2)
+
         plt.subplots_adjust(hspace=2, wspace=0)
 
         # plotting the points
@@ -206,81 +211,105 @@ class visualizationClass:
         plt2_2.set_ylim(0, 101)
         plt2_2.set_xlim(__endofday, __endpred)
         # plt2_2.yticks([0, 50, 100], "")
-
+        plt3.set_ylim(0, 101)
         plt3.set_xlim(ti[0], __endofday)
 
-        plt4.set_ylim(-0.1, 3.1)
+        plt3_2.set_ylim(0, 101)
+        plt3_2.set_xlim(__endofday, __endpred)
         plt4.set_xlim(ti[0], __endofday)
 
-        plt5.set_ylim(-0.1, 5.1)
+        plt5.set_ylim(-0.1, 3.1)
         plt5.set_xlim(ti[0], __endofday)
 
+        plt6.set_ylim(-0.1, 5.1)
         plt6.set_xlim(ti[0], __endofday)
+
+        plt7.set_xlim(ti[0], __endofday)
 
         plt1.plot(ti, self.Cons_a, label="Verbrauch", linewidth="0.5")
         plt1.plot(ti, self.Prod_a, label="Produktion", linewidth="0.5")
         plt1.plot(ti, self.Batt_pow_a, label="Laden(-)/Entladen(+)", linewidth="0.5")
         plt1.plot(ti, self.GridFeedIn_pow_a, label="Einspeisung(+)/Bezug(-)", linewidth="0.5")
         plt1.plot(ti, self.ConsHome_a, label="Verbr. o. WB", linewidth="0.5")
-        plt1.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
-        plt1.plot(pred.date_a, pred.powProdLow_a, 'tab:brown', label="präd. Produktion Min.", linewidth="0.5")
+        #plt1.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
+        #plt1.plot(pred.date_a, pred.powProdLow_a, 'tab:brown', label="präd. Produktion Min.", linewidth="0.5")
         plt1.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
-
-        plt1_2.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
-        plt1_2.plot(pred.date_a, pred.powProdLow_a, 'tab:brown', label="präd. Produktion Min.", linewidth="0.5")
+        plt1.fill_between(pred.date_a, pred.powProdLow_a, pred.powProd_a, color='C0', alpha=0.4, label='Präd. Produktion')
+        #plt1_2.plot(pred.date_a, pred.powProd_a, 'tab:brown', label="präd. Produktion", linewidth="0.5")
+        #plt1_2.plot(pred.date_a, pred.powProdLow_a, 'tab:brown', label="präd. Produktion Min.", linewidth="0.5")
         plt1_2.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
+        plt1_2.fill_between(pred.date_a, pred.powProdLow_a, pred.powProd_a, color='C0', alpha=0.4)
 
-        plt2.plot(ti, self.SOC_a, label="SOC", linewidth="0.5")
+        n = len(pred.date_a)
         plt2.plot(ti, self.Car_SOC_a, label="SOC_Auto", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.minSOCHome_a, 'r', label="min. SOC Haus Min", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.minSOCHomeLowProd_a, 'r--', label="min. SOC Haus Max", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.maxSOCHome_a, 'c--', label="max. SOC Haus", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss", linewidth="0.5")
-        plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln", linewidth="0.5")
+        #plt2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio", linewidth="0.5")
+        #plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss", linewidth="0.5")
+        #plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln", linewidth="0.5")
+        plt2.fill_between(pred.date_a, 0, np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a), color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
+        plt2.fill_between(pred.date_a, pred.minSOCVeh_a, np.maximum(pred.maxSOCVehProdChrg_a,  pred.minSOCVeh_a), linewidth=0.0, color='orange', alpha=0.4, label='Fz SOC: vollst. Ertrag laden')
+        plt2.fill_between(pred.date_a, pred.maxSOCVehProdChrg_a, pred.maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
+        plt2.fill_between(pred.date_a, pred.maxSOCVehExcessChrg_a, 110, color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
 
-        plt2.annotate("{:10.0f}".format(self.SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.SOC_a[i - 2]),
-                      horizontalalignment="right")
-        plt2.annotate("{:10.0f}".format(self.Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.Car_SOC_a[i - 2]),
+        plt2.annotate("{:10.0f}".format(self.Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.Car_SOC_a[i - 2]), horizontalalignment="right")
+
+
+
+        #plt2_2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio")
+        plt2_2.fill_between(pred.date_a, 0, np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a),  color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
+        plt2_2.fill_between(pred.date_a, pred.maxSOCVehProdChrg_a, pred.maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
+        plt2_2.fill_between(pred.date_a, pred.maxSOCVehExcessChrg_a, 110,  color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
+        #plt2_2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss")
+        #plt2_2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln")
+        plt2_2.fill_between(pred.date_a, pred.maxSOCVehProdChrg_a, np.minimum(pred.maxSOCVehProdChrg_a, pred.minSOCVeh_a), linewidth=0.0, color='orange', alpha=0.4, label='Fz SOC: vollst. Ertrag laden')
+
+
+        plt3.plot(ti, self.SOC_a, label="SOC", linewidth="0.5")
+        #plt3.plot(pred.date_a, pred.maxSOCHome_a, 'c--', label="max. SOC Haus", linewidth="0.5")
+        plt3.fill_between(pred.date_a, np.full(n, 0), pred.minSOCHome_a,  color='tomato', alpha=0.4, label='Haus SOC zu gering')
+        plt3.fill_between(pred.date_a, pred.minSOCHome_a, pred.minSOCHomeLowProd_a, color='gold', alpha=0.4, label='Haus SOC Zielbereich ')
+        plt3.fill_between(pred.date_a, pred.minSOCHomeLowProd_a, np.full(n, 110), color='palegreen', alpha=0.4, label='Haus SOC Überschuss ')
+
+
+        plt3.annotate("{:10.0f}".format(self.SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.SOC_a[i - 2]),
                       horizontalalignment="right")
 
-        plt2_2.plot(pred.date_a, pred.minSOCHome_a, 'r', label="min. SOC Haus")
-        plt2_2.plot(pred.date_a, pred.minSOCHomeLowProd_a, 'r--', label="min. SOC Haus")
-        plt2_2.plot(pred.date_a, pred.maxSOCHome_a, 'c--', label="max. SOC Haus")
-        plt2_2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio")
-        plt2_2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss")
-        plt2_2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln")
+        #plt3_2.plot(pred.date_a, pred.maxSOCHome_a, 'c--', label="max. SOC Haus")
+        plt3_2.fill_between(pred.date_a, np.full(n, 0), pred.minSOCHome_a, color='tomato', alpha=0.4, label='Haus SOC zu gering')
+        plt3_2.fill_between(pred.date_a, pred.minSOCHome_a, pred.minSOCHomeLowProd_a, color='gold', alpha=0.4, label='Haus SOC Zielbereich ')
+        plt3_2.fill_between(pred.date_a, pred.minSOCHomeLowProd_a, np.full(n, 110), color='palegreen', alpha=0.4, label='Haus SOC Überschuss ')
 
-        plt3.plot(ti, self.Consumption, label="Verbrauch")
-        plt3.plot(ti, self.Production, label="Produktion")
-        plt3.plot(ti, self.FeedIn, label="Einspeisung")
-        plt3.plot(ti, self.Grid_Consumption, label="Bezug")
-        plt3.annotate("{:10.1f}".format(self.Consumption[i - 2]) + " kWh", xy=(ti[i - 2], self.Consumption[i - 2]),
+        plt4.plot(ti, self.Consumption, label="Verbrauch")
+        plt4.plot(ti, self.Production, label="Produktion")
+        plt4.plot(ti, self.FeedIn, label="Einspeisung")
+        plt4.plot(ti, self.Grid_Consumption, label="Bezug")
+        plt4.annotate("{:10.1f}".format(self.Consumption[i - 2]) + " kWh", xy=(ti[i - 2], self.Consumption[i - 2]),
                       horizontalalignment="right")
-        plt3.annotate("{:10.1f}".format(self.Production[i - 2]) + " kWh", xy=(ti[i - 2], self.Production[i - 2]),
+        plt4.annotate("{:10.1f}".format(self.Production[i - 2]) + " kWh", xy=(ti[i - 2], self.Production[i - 2]),
                       horizontalalignment="right")
-        plt3.annotate("{:10.1f}".format(self.FeedIn[i - 2]) + " kWh", xy=(ti[i - 2], self.FeedIn[i - 2]),
+        plt4.annotate("{:10.1f}".format(self.FeedIn[i - 2]) + " kWh", xy=(ti[i - 2], self.FeedIn[i - 2]),
                       horizontalalignment="right")
-        plt3.annotate("{:10.1f}".format(self.Grid_Consumption[i - 2]) + " kWh",
+        plt4.annotate("{:10.1f}".format(self.Grid_Consumption[i - 2]) + " kWh",
                       xy=(ti[i - 2], self.Grid_Consumption[i - 2]), horizontalalignment="right")
 
-        plt4.plot(ti, self.newValueSOCCar_a, label="Neuer API-Wert SOC Auto (toggle 0/1)")
+        plt5.plot(ti, self.newValueSOCCar_a, label="Neuer API-Wert SOC Auto (toggle 0/1)")
 
-        plt5.plot(ti, self.stChargeMode_a, label="Modus")
-        plt5.plot(ti, self.flgAuto_a, label="Automatik")
-        plt5.annotate("{:10.0f}".format(self.stChargeMode_a[i - 2]) + "", xy=(ti[i - 2], self.stChargeMode_a[i - 2]),
+        plt6.plot(ti, self.stChargeMode_a, label="Modus")
+        plt6.plot(ti, self.flgAuto_a, label="Automatik")
+        plt6.annotate("{:10.0f}".format(self.stChargeMode_a[i - 2]) + "", xy=(ti[i - 2], self.stChargeMode_a[i - 2]),
                       horizontalalignment="right")
 
-        plt6.plot(ti, [int(i) for i in self.SystemStatus_a],
+        plt7.plot(ti, [int(i) for i in self.SystemStatus_a],
                   label="Fahrzeugstatus (Unknown/Error=0, Idle=1, Charging=2, WaitCar=3, Complete=4, Error=5)")
-        # plt6.annotate("{:10.0f}".format(SystemStatus_a[i-2]) + "", xy=(ti[i-2], SystemStatus_a,[i-2]), horizontalalignment="right")
+        # plt7.annotate("{:10.0f}".format(SystemStatus_a[i-2]) + "", xy=(ti[i-2], SystemStatus_a,[i-2]), horizontalalignment="right")
 
         plt1.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=4)
         plt2.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=3)
-        plt3.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=4)
-        plt4.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=1)
-        plt5.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2)
+        plt3.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=3)
+
+        plt4.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=4)
+        plt5.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=1)
         plt6.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2)
+        plt7.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2)
 
         # function to show the plot
         figure = plt.gcf()  # get current figure
@@ -290,16 +319,17 @@ class visualizationClass:
 
         plt2.grid()
         plt2_2.grid()
-
         plt3.grid()
-
+        plt3_2.grid()
         plt4.grid()
-        plt5.grid()
 
-        # plt3.grid()
+        plt5.grid()
+        plt6.grid()
+
+        # plt4.grid()
         # plt.tight_layout()
         plt.savefig("/home/pi/Entwicklung/graph.png")
-        plt.savefig("/home/pi/Entwicklung/graph.svg", format="svg")
+        plt.savefig("/home/pi/Entwicklung/graph.svg", format="svg", bbox_inches='tight')
         os.system("sudo cp /home/pi/Entwicklung/graph.svg /var/www/html/graph.svg")
         os.system("cp /var/www/html/input.txt /home/pi/Entwicklung")
         # plt.savefig("/var/www/html/graph.png")
