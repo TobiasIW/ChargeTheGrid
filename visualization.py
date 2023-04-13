@@ -127,51 +127,53 @@ class visualizationClass:
     def __init__(self):
         self.clear()
         self.berlin = pytz.timezone("Europe/Berlin")
-        data = csv.reader(open(self.csvname, 'r'))
-        i = 0
-        for row in data:
-            i = i + 1
-            if i > 1:
+        try:
+            data = csv.reader(open(self.csvname, 'r'))
+            i = 0
+            for row in data:
+                i = i + 1
+                if i > 1:
 
-                self.SOC_a.append(float(row[0]))
-                self.Prod_a.append(int(row[1]))
-                self.Cons_a.append(int(row[2]))
-                self.Batt_pow_a.append(int(row[3]))
-                self.GridFeedIn_pow_a.append(int(row[4]))
-                self.OperatingMode_a.append(int(row[5]))
-                self.SystemStatus_a.append(row[6])
-                self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
-                if self.GridFeedIn_pow_a[i - 2] > 0:
-                    self.FeedIn_pow = self.GridFeedIn_pow_a[i - 2]
-                    self.Grid_Consumption_pow = 0
-                else:
-                    self.FeedIn_pow = 0
-                    self.Grid_Consumption_pow = -self.GridFeedIn_pow_a[i - 2]
+                    self.SOC_a.append(float(row[0]))
+                    self.Prod_a.append(int(row[1]))
+                    self.Cons_a.append(int(row[2]))
+                    self.Batt_pow_a.append(int(row[3]))
+                    self.GridFeedIn_pow_a.append(int(row[4]))
+                    self.OperatingMode_a.append(int(row[5]))
+                    self.SystemStatus_a.append(row[6])
+                    self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
+                    if self.GridFeedIn_pow_a[i - 2] > 0:
+                        self.FeedIn_pow = self.GridFeedIn_pow_a[i - 2]
+                        self.Grid_Consumption_pow = 0
+                    else:
+                        self.FeedIn_pow = 0
+                        self.Grid_Consumption_pow = -self.GridFeedIn_pow_a[i - 2]
 
-                if i > 2:
-                    time_delta = self.Time_a[i - 2] - self.Time_a[i - 3]
-                    self.exec_delta = (time_delta.total_seconds() / 3600)
-                    self.Consumption.append(self.Consumption[i - 3] + (
-                            self.Cons_a[i - 2] + self.Cons_a[i - 3]) / 2 * self.exec_delta / 1000)
-                    self.Production.append(
-                        self.Production[i - 3] + (self.Prod_a[i - 2] + self.Prod_a[i - 2]) / 2 * self.exec_delta / 1000)
-                    self.FeedIn.append(self.FeedIn[i - 3] + self.FeedIn_pow * self.exec_delta / 1000)
-                    self.Grid_Consumption.append(
-                        self.Grid_Consumption[i - 3] + self.Grid_Consumption_pow * self.exec_delta / 1000)
+                    if i > 2:
+                        time_delta = self.Time_a[i - 2] - self.Time_a[i - 3]
+                        self.exec_delta = (time_delta.total_seconds() / 3600)
+                        self.Consumption.append(self.Consumption[i - 3] + (
+                                self.Cons_a[i - 2] + self.Cons_a[i - 3]) / 2 * self.exec_delta / 1000)
+                        self.Production.append(
+                            self.Production[i - 3] + (self.Prod_a[i - 2] + self.Prod_a[i - 2]) / 2 * self.exec_delta / 1000)
+                        self.FeedIn.append(self.FeedIn[i - 3] + self.FeedIn_pow * self.exec_delta / 1000)
+                        self.Grid_Consumption.append(
+                            self.Grid_Consumption[i - 3] + self.Grid_Consumption_pow * self.exec_delta / 1000)
 
-                else:
-                    self.Consumption.append(int(row[2]) * self.exec_delta / 1000)
-                    self.Production.append(int(row[1]) * self.exec_delta / 1000)
-                    self.FeedIn.append(self.FeedIn_pow * self.exec_delta / 1000)
-                    self.Grid_Consumption.append(self.Grid_Consumption_pow * self.exec_delta / 1000)
-                self.newValueSOCCar_a.append(int(row[8]))
-                self.stChargeMode_a.append(int(row[9]))
-                self.flgAuto_a.append(int(row[10]))
-                self.ConsHome_a.append(int(row[11]))  # int(row[10]))
-                self.Car_SOC_a.append(float(row[12]))
+                    else:
+                        self.Consumption.append(int(row[2]) * self.exec_delta / 1000)
+                        self.Production.append(int(row[1]) * self.exec_delta / 1000)
+                        self.FeedIn.append(self.FeedIn_pow * self.exec_delta / 1000)
+                        self.Grid_Consumption.append(self.Grid_Consumption_pow * self.exec_delta / 1000)
+                    self.newValueSOCCar_a.append(int(row[8]))
+                    self.stChargeMode_a.append(int(row[9]))
+                    self.flgAuto_a.append(int(row[10]))
+                    self.ConsHome_a.append(int(row[11]))  # int(row[10]))
+                    self.Car_SOC_a.append(float(row[12]))
 
-                self.x.append(i)
-
+                    self.x.append(i)
+        except:
+            print("could not load csv")
     def plotData(self, pred):
         i = len(self.x)
         ti = [pd.to_datetime(d) for d in self.Time_a]

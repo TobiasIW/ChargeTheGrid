@@ -81,7 +81,7 @@ function clearFields()
 function addEmptyLine()
 {
 	nElements=nElements+1;
-	addField(nElements, new Date().toJSON().slice(0, 10), "")
+	addField(nElements, new Date().toJSON().slice(0, 10), 0,"07:00","07:00")
 }
 function changeContent() {
 
@@ -96,11 +96,18 @@ var json = document.getElementById('kmArea_id').value;//$.getJSON("http://tweibe
 var mydata = JSON.parse(json); 
 //alert(JSON.stringify(mydata));
 //alert(mydata.consumption.length)
-	for (let i = 0; i < mydata.consumption.length; i++)       {
-		//alert(i + ": " + mydata.consumption[i].date + " / " + mydata.consumption[i].km );
-		addField(i + 1, mydata.consumption[i].date, mydata.consumption[i].km)
-		nElements = i+1;
+
+for (let i = 0; i < mydata.consumption.length; i++)       {
+	//alert(i + ": " + mydata.consumption[i].date + " / " + mydata.consumption[i].km );
+	dateToday=new Date(new Date().toJSON().slice(0, 10));
+	dateJson = new Date (mydata.consumption[i].date);
+	if (dateJson.getTime()>=dateToday.getTime())
+	{
+		nElements = nElements+1;
+		addField(nElements, mydata.consumption[i].date, mydata.consumption[i].km, mydata.consumption[i].StartTime, mydata.consumption[i].EndTime);
+		
 	}
+}
  
  
  //alert("stringify: " + JSON.stringify(mydata));
@@ -129,7 +136,8 @@ function createJson()
 	writeJson(JSON.stringify(dailyCons));
 	
 }
-function addField(id, arg_date, km) {
+function addField(id, arg_date, km,tiStart, tiEnd) {
+	
 	//alert("test_addfield");
 	//Create an input type dynamically.
 	var txtDate = document.createElement("input");
@@ -138,6 +146,14 @@ function addField(id, arg_date, km) {
 	var txtEndTime = document.createElement("input");
 	//Create Labels
 	var label = document.createElement("Label");
+	if (tiStart == null)
+	{
+		tiStart="08:00";
+	}
+	if (tiEnd == null)
+	{
+		tiEnd="08:00";
+	}
 	label.innerHTML = "<br>Element " + id + "(Datum/km): " ;     
 	//alert("test_addfield1");
 
@@ -155,12 +171,12 @@ function addField(id, arg_date, km) {
 	txtKm.setAttribute("style", "width:50px");
 	
 	txtStartTime.setAttribute("type", "time");
-	txtStartTime.setAttribute("value", "08:00" );
+	txtStartTime.setAttribute("value", tiStart );
 	txtStartTime.setAttribute("id", "tiStart_" + id);
 	txtStartTime.setAttribute("style", "width:80px");
 	
 	txtEndTime.setAttribute("type", "time");
-	txtEndTime.setAttribute("value", "08:00" );
+	txtEndTime.setAttribute("value", tiEnd);
 	txtEndTime.setAttribute("id", "tiEnd_" + id);
 	txtEndTime.setAttribute("style", "width:80px");
 	

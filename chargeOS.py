@@ -33,7 +33,7 @@ cycleCounter = 0  # neuer Wert erst nach 2h
 while True:#
     #try:
     cycleCounter = cycleCounter + 1
-    flgExe, dT = sysCtrl.executeTask(60*120, 60*120)
+    flgExe, dT = sysCtrl.executeTask(60*120, 0)#60*60)
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 120min task###")
         #print("### start 120min Task ###")

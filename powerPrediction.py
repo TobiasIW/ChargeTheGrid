@@ -26,7 +26,7 @@ class PredictionClass:
         self.azimuthPV = np.array([118, 208, 298])
         self.zenithPV = np.array([35, 35, 35])
         self.pwrPeak = np.array([900, 7800, 900])
-        self.qConsPerDay = 2500  # 5000Wh: 15kWh/100km * 33km
+        self.qConsPerDay = 4000  # 5000Wh: 15kWh/100km * 33km
         self.hDailyCons = 8  # assume daily consumption at 12pm
         self.minSOCVehTar = 50
         self.maxSOCVehTarProdChrg = 70
@@ -166,20 +166,31 @@ class PredictionClass:
                         _qCutOff = 0
                     else:
                         _qCutOff = _qCutOff
+                deltaSOC, __flgPlannedTrip, __flgVehAway = self.getDailyCons(self.date_a[i], self.date_a[i + 1])
+                if not __flgVehAway:
+                    self.minSOCVeh_a[i] = self.minSOCVeh_a[i + 1] - max(0, _qExcess) / self.qVeh * 100
+                    self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt / self.qVeh * 100
+                    self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1] - _qCutOff / self.qVeh * 100
+                else:
+                    self.minSOCVeh_a[i] = self.minSOCVeh_a[i+1]
+                    self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i+1]
+                    self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i+1]
 
-                self.minSOCVeh_a[i] = self.minSOCVeh_a[i + 1] - max(0, _qExcess) / self.qVeh * 100
-                self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt / self.qVeh * 100
-                self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1] - _qCutOff / self.qVeh * 100
 
                 #if self.date_a[i].hour == self.hDailyCons and self.date_a[i + 1].hour > self.hDailyCons:  # first time hour matches configured time (if hDailyCons= 13, then 13:55
-                deltaSOC = self.getDailyCons(self.date_a[i], self.date_a[i+1])
+
                 self.minSOCVeh_a[i] += deltaSOC
                 self.maxSOCVehProdChrg_a[i] += deltaSOC
                 self.maxSOCVehExcessChrg_a[i] += deltaSOC
 
-                self.minSOCVeh_a[i] = self.lim(self.minSOCVeh_a[i], 50, 80)
-                self.maxSOCVehProdChrg_a[i] = self.lim(self.maxSOCVehProdChrg_a[i], 15, 85)
-                self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, 93)
+                if __flgPlannedTrip:
+                    self.minSOCVeh_a[i] = self.lim(self.minSOCVeh_a[i], 50, max(80, min(100, 15 + deltaSOC)))
+                    self.maxSOCVehProdChrg_a[i] = self.lim(self.maxSOCVehProdChrg_a[i], 15, max(80, min(100, 15 + deltaSOC)))
+                    self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, 100)
+                else:
+                    self.minSOCVeh_a[i] = self.lim(self.minSOCVeh_a[i], 50, max(80, self.minSOCVeh_a[i+1]))
+                    self.maxSOCVehProdChrg_a[i] = self.lim(self.maxSOCVehProdChrg_a[i], 15, max(85, self.maxSOCVehProdChrg_a[i+1]))
+                    self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, max(100, self.maxSOCVehExcessChrg_a[i+1]))
 
 
             # print(self.date_a[i])
@@ -192,19 +203,28 @@ class PredictionClass:
 
     def getDailyCons(self, arg_date, arg_dateOld):
         cons = 0
-        if arg_date.hour == self.hDailyCons and arg_dateOld.hour > self.hDailyCons:
-            cons = 0.150 * self.consPer100km
+        __foundTripOnDate = False
+        __flgPlannedTrip = False
+        __flgVehAway = False
         for day in self.jDailyCons['consumption']:
             try:
-                jsonDate = datetime.datetime.strptime(day["date"] + " " + day["StartTime"], '%Y-%m-%d %H:%M')
+                jsonStrtDate = datetime.datetime.strptime(day["date"] + " " + day["StartTime"], '%Y-%m-%d %H:%M')
+                jsonEndDate = datetime.datetime.strptime(day["date"] + " " + day["EndTime"], '%Y-%m-%d %H:%M')
             except Exception as e:
                 print(e)
-            jsonDateLoc = self.berlin.localize(jsonDate)
-            if arg_date <= jsonDateLoc < arg_dateOld:
+            jsonStrtDateLoc = self.berlin.localize(jsonStrtDate)
+            jsonEndDateLoc = self.berlin.localize(jsonEndDate)
+            if jsonStrtDateLoc.day == arg_date.day:
+                __foundTripOnDate = True
+            if arg_date <= jsonStrtDateLoc < arg_dateOld:
                 cons = float(day["km"]) * self.consPer100km / 100
-
+                __flgPlannedTrip = True
+            if jsonStrtDateLoc < arg_date < jsonEndDateLoc:
+                __flgVehAway = True
+        if (not __foundTripOnDate) and arg_date.hour == self.hDailyCons and arg_dateOld.hour > self.hDailyCons:
+            cons = 0.12 * self.consPer100km
         # print("Day: "+str(date)+", Cons: "+str(cons))
-        return cons / self.qVeh * 100
+        return (cons / self.qVeh * 100, __flgPlannedTrip, __flgVehAway)
 
     def isPluggedIn(self, date):
         a=1

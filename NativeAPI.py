@@ -12,7 +12,7 @@ from vsr import VSR
 logging.basicConfig(format='[%(asctime)s] [%(name)s::%(levelname)s] %(message)s', datefmt='%d/%m/%Y %H:%M:%S')
 
 logger = logging.getLogger('API')
-logger.setLevel(logging.getLogger().level)
+logger.setLevel(10)#logging.getLogger().level)
 
 class VWError(Exception):
     def __init__(self, message):
@@ -118,6 +118,7 @@ class WeConnect():
                 e = r.json()
                 msg = 'Error {}'.format(r.status_code)
                 logger.debug('Response error in JSON format')
+                print(e)
                 if ('error' in e):
                     msg += ':'
                     if ('errorCode' in e['error']):

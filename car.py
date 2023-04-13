@@ -38,11 +38,13 @@ class carClass:
 
     def getInfo(self):
         # logging.getLogger().setLevel(logging.WARN)
+        print('test1')
         vwc = WeConnect()
+        print('test2')
         vwc.login()
-
+        print('test3')
         cars = vwc.get_real_car_data()
-
+        print('test4')
         profile = vwc.get_personal_data()
 
         print('Hi {} {} {} ({})!'.format(profile['salutation'], profile['firstName'], profile['lastName'],
@@ -50,7 +52,7 @@ class carClass:
         mbb = vwc.get_mbb_status()
         # print('Profile completed?', mbb['profileCompleted'])
         # print('S-PIN defined?', mbb['spinDefined'])
-        # print('CarNet enrollment country:',mbb['carnetEnrollmentCountry'])
+        print('CarNet enrollment country:',mbb['carnetEnrollmentCountry'])
         if (cars and len(cars)):
             # print('Enumerating cars...')
             for car in cars['realCars']:
@@ -66,7 +68,7 @@ class carClass:
                 # print('---\nFetching information of {} (vin {})...\n---\n'.format(car['nickname'], vin))
                 details = vwc.get_vehicle_data(vin)
                 cardata = details['vehicleDataDetail']['carportData']
-                # print('\tModel:' ,cardata['modelName'])
+                print('\tModel:' ,cardata['modelName'])
                 # print('\tYear:', cardata['modelYear'])
                 # print('\tModel code:', cardata['modelCode'])
                 # print('\tEngine:', cardata['engine'])
@@ -79,7 +81,7 @@ class carClass:
                 pvsr = vwc.parse_vsr(vsr)
                 # print('\tStatus:')
                 status = pvsr['status']
-                # print (status)
+                print (status)
                 self.SOC = float(status['state_of_charge'].split()[0])
                 if (self.newValue == 0):
                     self.newValue = 1

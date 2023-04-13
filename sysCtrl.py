@@ -24,6 +24,7 @@ class sysCtrlClass:
         pid = str(os.getpid())
         pidfile = "/home/pi/Entwicklung/chargePid.pid"
         print(pid)
+
         if os.path.isfile(pidfile):
             with open(pidfile, 'r') as pidFileStream:
                 pidFromFile = int(pidFileStream.read())
@@ -35,7 +36,6 @@ class sysCtrlClass:
                     print("pid does not exist")
         else:
             print("does not exist")
-
         pidFileWriter = open(pidfile, 'w')
         pidFileWriter.write(pid)
         pidFileWriter.close()
