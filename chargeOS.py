@@ -10,6 +10,7 @@ import visualization
 import car
 import logging
 import powerPrediction
+import configuration
 from sysCtrl import sysCtrlClass
 sysCtrl = sysCtrlClass()
 # logger=logging.getLogger("chargeOS")
@@ -21,7 +22,7 @@ logging.error("started")
 sysCtrl.checkRunning()
 
 charger = goecharger.chargerClass("192.168.178.201")
-
+config = configuration.configClass()
 # print("test4")
 homeData = home.homeData()
 strategy = chargeStrategy.chargeStrategy(homeData)
