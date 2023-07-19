@@ -2,16 +2,20 @@ import csv
 import matplotlib.pyplot as plt
 import pandas as pd
 import asyncio
-from kasa import SmartPlug
+# from kasa import SmartPlug
 import os.path
 import time
 import datetime
 import pytz
 import numpy as np
+from scipy import integrate
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.io as pio
 
 
 class visualizationClass:
-    csvname = "/home/pi/Entwicklung/bat_stats.csv"
     exec_delta = 1 / 60  # time between scheduled execution in h
     x = []
 
@@ -28,6 +32,7 @@ class visualizationClass:
     Production = []
     FeedIn = []
     Grid_Consumption = []
+    Car_Consumption = []
     Charge = []
     Discharge = []
     SwitchActive_a = []
@@ -48,7 +53,7 @@ class visualizationClass:
                     retVal = float(row[Attr])  # use last one only
         return retVal
 
-    def writeCSV(self, homeData, charger, myCar):
+    def writeCSV(self, homeData, charger, myCar, config):
         with open(self.csvname, 'a', newline='') as csvfile:
             fieldnames = ['SOC', 'Prod', 'Cons', 'Batt_pow', 'GridFeedIn_pow', 'OperatingMode', 'CarStatus',
                           'TimeStamp', 'newValueSOCCar', 'Mode', 'flgAuto', 'Cons_Home', 'SOC_Car']
@@ -59,7 +64,6 @@ class visualizationClass:
                  'flgAuto': homeData.flgAuto, 'CarStatus': charger.state, 'TimeStamp': homeData.TimeStamp,
                  'newValueSOCCar': myCar.newValue, 'Mode': homeData.stChargeMode, 'Cons_Home': homeData.Cons_home,
                  'SOC_Car': myCar.SOC})
-            data = csv.reader(open(self.csvname, 'r'))
 
             i = len(self.x) - 1  #
 
@@ -72,27 +76,8 @@ class visualizationClass:
             self.SystemStatus_a.append(charger.state)
 
             self.Time_a.append(self.berlin.localize(pd.to_datetime(homeData.TimeStamp)))
-            if self.GridFeedIn_pow_a[i] > 0:
-                self.FeedIn_pow = self.GridFeedIn_pow_a[i]
-                self.Grid_Consumption_pow = 0
-            else:
-                self.FeedIn_pow = 0
-                self.Grid_Consumption_pow = -self.GridFeedIn_pow_a[i]
 
-            if i > 2:
-                time_delta = self.Time_a[-1] - self.Time_a[-2]
-                self.exec_delta = (time_delta.total_seconds() / 3600)
-                self.Consumption.append(self.Consumption[- 1] + self.Cons_a[-1] * self.exec_delta / 1000)
-                self.Production.append(self.Production[- 1] + self.Prod_a[-1] * self.exec_delta / 1000)
-                self.FeedIn.append(self.FeedIn[- 1] + self.FeedIn_pow * self.exec_delta / 1000)
-                self.Grid_Consumption.append(
-                    self.Grid_Consumption[-1] + self.Grid_Consumption_pow * self.exec_delta / 1000)
 
-            else:
-                self.Consumption.append(homeData.Cons * self.exec_delta / 1000)
-                self.Production.append(homeData.Prod * self.exec_delta / 1000)
-                self.FeedIn.append(self.FeedIn_pow * self.exec_delta / 1000)
-                self.Grid_Consumption.append(self.Grid_Consumption_pow * self.exec_delta / 1000)
             self.newValueSOCCar_a.append(myCar.newValue)
             self.stChargeMode_a.append(homeData.stChargeMode)
             self.flgAuto_a.append(homeData.flgAuto)
@@ -101,6 +86,23 @@ class visualizationClass:
 
             self.x.append(i)
 
+        time_delta_a = [self.Time_a[n].timestamp() / 3600000 for n in range(0, len(self.Time_a))]
+        __cons_car = [self.Cons_a[n] - self.ConsHome_a[n] for n in range(0, len(self.Time_a))]
+        self.FeedIn_pow = [max(0, self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
+        self.Grid_Consumption_pow = [max(0, -self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
+
+        self.Consumption = integrate.cumtrapz(self.Cons_a, time_delta_a, initial = 0)
+        self.Production = integrate.cumtrapz(self.Prod_a, time_delta_a, initial = 0)
+        self.FeedIn = integrate.cumtrapz(self.FeedIn_pow, time_delta_a, initial = 0)
+        self.Grid_Consumption = integrate.cumtrapz(self.Grid_Consumption_pow, time_delta_a, initial = 0)
+        self.Car_Consumption = integrate.cumtrapz(__cons_car, time_delta_a, initial = 0)
+        df = pd.DataFrame({'index': self.Time_a, 'consumption': self.Cons_a, 'production': self.Prod_a})
+        pd.options.plotting.backend= "plotly"
+        __current_date = datetime.datetime.now().date()
+        __is_from_today = self.Time_a[0].date() == __current_date
+        if __is_from_today:
+            self.__init__(config)
+        a=1
     def clear(self):
         self.x = []
         self.SOC_a = []
@@ -124,8 +126,10 @@ class visualizationClass:
         self.Car_SOC_a = []
         self.FeedIn_pow = []
 
-    def __init__(self):
+    def __init__(self, config):
         self.clear()
+        self.csvname = config.dataFolder + "bat_stats.csv"
+        self.dfCsvName = config.dataFolder + "df.csv"
         self.berlin = pytz.timezone("Europe/Berlin")
         try:
             data = csv.reader(open(self.csvname, 'r'))
@@ -142,29 +146,9 @@ class visualizationClass:
                     self.OperatingMode_a.append(int(row[5]))
                     self.SystemStatus_a.append(row[6])
                     self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
-                    if self.GridFeedIn_pow_a[i - 2] > 0:
-                        self.FeedIn_pow = self.GridFeedIn_pow_a[i - 2]
-                        self.Grid_Consumption_pow = 0
-                    else:
-                        self.FeedIn_pow = 0
-                        self.Grid_Consumption_pow = -self.GridFeedIn_pow_a[i - 2]
 
-                    if i > 2:
-                        time_delta = self.Time_a[i - 2] - self.Time_a[i - 3]
-                        self.exec_delta = (time_delta.total_seconds() / 3600)
-                        self.Consumption.append(self.Consumption[i - 3] + (
-                                self.Cons_a[i - 2] + self.Cons_a[i - 3]) / 2 * self.exec_delta / 1000)
-                        self.Production.append(
-                            self.Production[i - 3] + (self.Prod_a[i - 2] + self.Prod_a[i - 2]) / 2 * self.exec_delta / 1000)
-                        self.FeedIn.append(self.FeedIn[i - 3] + self.FeedIn_pow * self.exec_delta / 1000)
-                        self.Grid_Consumption.append(
-                            self.Grid_Consumption[i - 3] + self.Grid_Consumption_pow * self.exec_delta / 1000)
 
-                    else:
-                        self.Consumption.append(int(row[2]) * self.exec_delta / 1000)
-                        self.Production.append(int(row[1]) * self.exec_delta / 1000)
-                        self.FeedIn.append(self.FeedIn_pow * self.exec_delta / 1000)
-                        self.Grid_Consumption.append(self.Grid_Consumption_pow * self.exec_delta / 1000)
+
                     self.newValueSOCCar_a.append(int(row[8]))
                     self.stChargeMode_a.append(int(row[9]))
                     self.flgAuto_a.append(int(row[10]))
@@ -172,9 +156,21 @@ class visualizationClass:
                     self.Car_SOC_a.append(float(row[12]))
 
                     self.x.append(i)
+            time_delta_a = [self.Time_a[n].timestamp() / 3600000 for n in range(0, len(self.Time_a))]
+            self.FeedIn_pow = [max(0, self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
+            self.Grid_Consumption_pow = [max(0, -self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
+
+            self.Consumption = integrate.cumtrapz(self.Cons_a, time_delta_a, initial=0)
+            self.Production = integrate.cumtrapz(self.Prod_a, time_delta_a, initial=0)
+            self.FeedIn = integrate.cumtrapz(self.FeedIn_pow, time_delta_a, initial=0)
+            self.Grid_Consumption = integrate.cumtrapz(self.Grid_Consumption_pow, time_delta_a, initial=0)
+            __cons_car = [self.Cons_a[n] - self.ConsHome_a[n] for n in range(0, len(self.Time_a))]
+
+            self.Car_Consumption = integrate.cumtrapz(__cons_car, time_delta_a, initial=0)
+
         except:
-            print("could not load csv")
-    def plotData(self, pred):
+            print("Exception: could not load csv")
+    def plotData(self, pred, config):
         i = len(self.x)
         ti = [pd.to_datetime(d) for d in self.Time_a]
         # print(ti)
@@ -255,9 +251,23 @@ class visualizationClass:
         plt2.annotate("{:10.0f}".format(self.Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.Car_SOC_a[i - 2]), horizontalalignment="right")
 
 
-
         #plt2_2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio")
-        plt2_2.fill_between(pred.date_a, 0, np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a),  color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
+        try:
+            plt2_2.fill_between(pred.date_a, 0, np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a),  color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
+        except ValueError as e:
+            print("Exception: ValueError: ", e)
+            with np.printoptions(threshold=np.inf):
+                print("pred.minSOCVeh_a: ", pred.minSOCVeh_a)
+                print("pred.maxSOCVehProdChrg_a: ", pred.maxSOCVehProdChrg_a)
+                print("np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a): ",
+                      np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a))
+        except Exception as e:
+            print("Exception: ",e)
+            with np.printoptions(threshold=np.inf):
+                print("pred.minSOCVeh_a: ", pred.minSOCVeh_a)
+                print("pred.maxSOCVehProdChrg_a: ", pred.maxSOCVehProdChrg_a)
+                print("np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a): ", np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a))
+
         plt2_2.fill_between(pred.date_a, pred.maxSOCVehProdChrg_a, pred.maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
         plt2_2.fill_between(pred.date_a, pred.maxSOCVehExcessChrg_a, 110,  color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
         #plt2_2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss")
@@ -330,13 +340,77 @@ class visualizationClass:
 
         # plt4.grid()
         # plt.tight_layout()
-        plt.savefig("/home/pi/Entwicklung/graph.png")
-        plt.savefig("/home/pi/Entwicklung/graph.svg", format="svg", bbox_inches='tight')
-        os.system("sudo cp /home/pi/Entwicklung/graph.svg /var/www/html/graph.svg")
-        os.system("cp /var/www/html/input.txt /home/pi/Entwicklung")
-        # plt.savefig("/var/www/html/graph.png")
-        # plt.show()
-        # html_str = mpld3.fig_to_html(fig)
-        # Html_file = open("index.html", "w")
-        # Html_file.write(html_str)
-        # Html_file.close()
+        plt.savefig(config.dataFolder + "graph.png")
+        plt.savefig(config.dataFolder + "graph.svg", format="svg", bbox_inches='tight')
+
+        # Create subplots with two rows and one column
+        fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.015, row_heights=[0.3, 0.2, 0.2, 0.3])
+
+        # Add consumption trace to the first subplot
+        fig.add_trace(go.Scatter(x=ti, y=self.Cons_a, mode='lines',line=dict(color='blue', width=1), name='total consumption'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.ConsHome_a, mode='lines', line=dict(color='purple', width=1), name='home consumption'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Prod_a, mode='lines', line=dict(color='orange', width=1), name='Production'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.GridFeedIn_pow_a, line=dict(color='red', width=1), mode='lines', name='Einspeisung(+)/Bezug(-)'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Batt_pow_a, mode='lines', line=dict(color='green', width=1), name='Laden(-)/Entladen(+)'), row=1, col=1)
+
+        __colTomato = 'rgba(255, 99, 71, 0.4)'
+        __colBlue = 'rgba(0, 191, 255, 0.4)'
+        __colGreen = 'rgba(152, 255, 152, 0.4)'
+        __colOrange = 'rgba(255, 165, 0, 0.4)'
+        __colYellow = 'rgba(255, 215, 0, 0.4)'
+
+        fig.add_trace(go.Scatter(x=ti, y=self.Car_SOC_a, mode='lines', showlegend=True, name='Car SOC'), row=2, col=1)
+        #invisible line for filling area between excess charge limit and 100%
+        fig.add_trace(go.Scatter(x=pred.date_a, y=[100]*len(pred.date_a), mode='lines', showlegend=False, line=dict(color='green'), name='y=100'), row=2, col=1)
+        # lines for car SOC limits
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.maxSOCVehExcessChrg_a, mode='lines', showlegend=True, fill='tonexty',fillcolor=__colBlue, line=dict(color='green', width=1),  name='Fz SOC: smart Laden'), row=2, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.maxSOCVehProdChrg_a, mode='lines', showlegend=True, fill='tonexty', fillcolor=__colGreen,line=dict(color='orange', width=1), name='Fz SOC: smart Laden'), row=2, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a), mode='lines', fill='tonexty', fillcolor=__colOrange,line=dict(color='red', width=1), showlegend=True, name='Fz SOC: max. Laden'), row=2, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=[0]*len(pred.date_a), mode='lines', fill='tonexty', fillcolor=__colTomato,line=dict(color='red', width=1), showlegend=False, name='y=0'), row=2, col=1)
+
+
+
+        fig.add_trace(go.Scatter(x=ti, y=self.SOC_a, mode='lines', name='Home SOC'), row=3, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=[100]*len(pred.date_a), mode='lines', showlegend=False, line = dict(color='green', width=1),name='y=100'), row=3, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.minSOCHomeLowProd_a, mode='lines', fill='tonexty', fillcolor=__colGreen, line = dict(color='yellow', width=1), name='Max. Home SOC'), row=3, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.minSOCHome_a, mode='lines', fill='tonexty', fillcolor=__colYellow, line=dict(color='red', width=1), name='Min. Home SOC'), row=3, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=[0]*len(pred.date_a), mode='lines', fill='tonexty',fillcolor=__colTomato, showlegend=False, name='y=0'), row=3, col=1)
+
+
+        # Add production trace to the second subplot
+        fig.add_trace(go.Scatter(x=ti, y=self.Consumption, mode='lines', name='Total Consumption'), row=4, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Production, mode='lines', name='Total Production'), row=4, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Car_Consumption, mode='lines', name='Charge energy'), row=4, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Grid_Consumption, mode='lines', name='Bezug'), row=4, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.FeedIn, mode='lines', name='Einspeisung'), row=4, col=1)
+
+        # Update the layout
+        fig.update_layout(
+            xaxis_title='Time',
+            yaxis_title='Power',
+            yaxis2_title='Car SOC',
+            yaxis3_title='Home SOC',
+            yaxis4_title='Energy',
+            height=800,
+            width=1000,
+            autosize=True
+        )
+        # Set x-axis range from 12:00 AM to 11:59 PM of the current day
+        current_date = datetime.datetime.now().date()
+        x_range = [datetime.datetime.combine(current_date, datetime.datetime.min.time()),
+                   datetime.datetime.combine(current_date, datetime.datetime.max.time())]
+        fig.update_xaxes(range=x_range)
+        # Set y-axis range of the first subplot to 0 to 100
+        fig.update_yaxes(range=[-5000, 10000], row=1, col=1)
+        fig.update_yaxes(range=[0, 100], row=2, col=1)
+        fig.update_yaxes(range=[0, 100], row=3, col=1)
+
+        # Display the plot
+        #fig.write_html(config.dataFolder + 'plotly_plot.html')
+        pio.write_html(fig, config.dataFolder + 'plotly_plot.html', full_html=False)
+
+
+
+
+
+

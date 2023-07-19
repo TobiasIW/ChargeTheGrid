@@ -19,7 +19,7 @@ class PredictionClass:
     maxBattPowDischa = -3300
     maxBattPowChrg = 3300
     maxPowInv_C = 7000
-    maxFeedIn = 4200  # maximale Einspeiseleistung W
+    maxFeedIn = 6700  # maximale Einspeiseleistung W
 
     def __init__(self):
         self.berlin = pytz.timezone("Europe/Berlin")
@@ -30,7 +30,7 @@ class PredictionClass:
         self.hDailyCons = 8  # assume daily consumption at 12pm
         self.minSOCVehTar = 50
         self.maxSOCVehTarProdChrg = 70
-        self.maxSOCVehTarExcessChrg = 95
+        self.maxSOCVehTarExcessChrg = 90
 
         self.consPer100km = 15000.0  # Wh/100km
         self.anglZenithPwrDiff_a = [90, 60, 30, 0]
@@ -190,7 +190,7 @@ class PredictionClass:
                 else:
                     self.minSOCVeh_a[i] = self.lim(self.minSOCVeh_a[i], 50, max(80, self.minSOCVeh_a[i+1]))
                     self.maxSOCVehProdChrg_a[i] = self.lim(self.maxSOCVehProdChrg_a[i], 15, max(85, self.maxSOCVehProdChrg_a[i+1]))
-                    self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, max(100, self.maxSOCVehExcessChrg_a[i+1]))
+                    self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, max(90, self.maxSOCVehExcessChrg_a[i+1]))
 
 
             # print(self.date_a[i])
@@ -282,7 +282,7 @@ class PredictionClass:
                 __TEnv_a.append(days["temp"]["night"] - 273.15)
                 __RClouds_a.append(days["clouds"] / 100)#
 
-        print(__Date_a)
+        # print(__Date_a)
         timeExtrpDays = __Date_a[0]
 
         dateDay_a_ts = [self.toTimestamp(__Date_a[n]) for n in range(0, len(__Date_a))]

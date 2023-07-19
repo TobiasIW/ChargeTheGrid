@@ -20,20 +20,23 @@ class sysCtrlClass:
             return True
 
 
-    def checkRunning(self):
+    def checkRunning(self, config):
         pid = str(os.getpid())
-        pidfile = "/home/pi/Entwicklung/chargePid.pid"
-        print(pid)
+        pidfile = config.baseFolder + "chargePid.pid"
+        print("pid of process" + pid)
 
         if os.path.isfile(pidfile):
-            with open(pidfile, 'r') as pidFileStream:
-                pidFromFile = int(pidFileStream.read())
-                print("found pid: " + str(pidFromFile))
-                if (self.check_pid(pidFromFile)):
-                    print("pid exists, exiting")
-                    sys.exit()
-                else:
-                    print("pid does not exist")
+            try:
+                with open(pidfile, 'r') as pidFileStream:
+                    pidFromFile = int(pidFileStream.read())
+                    print("pid in file: " + str(pidFromFile))
+                    if (self.check_pid(pidFromFile)):
+                        print("pid exists, exiting")
+                        sys.exit()
+                    else:
+                        print("pid does not exist")
+            except Exception as e:
+                print("Exception: pid file invalid: ", e)
         else:
             print("does not exist")
         pidFileWriter = open(pidfile, 'w')

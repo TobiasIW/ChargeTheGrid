@@ -23,8 +23,8 @@ class chargerClass:
     MIN = 1
     MAX = 2
 
-    def __init__(self, arg_ip):
-        self.ip = arg_ip
+    def __init__(self, config):
+        self.ip = config.wbIP
         self.flg1P = False
         self.flgPluggedIn = False
     def updateVals(self):

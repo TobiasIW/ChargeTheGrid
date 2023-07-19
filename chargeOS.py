@@ -12,6 +12,7 @@ import logging
 import powerPrediction
 import configuration
 from sysCtrl import sysCtrlClass
+import pandas as pd
 sysCtrl = sysCtrlClass()
 # logger=logging.getLogger("chargeOS")
 # logger.setLevel(logging.INFO)
@@ -19,22 +20,22 @@ logging.basicConfig(format='%(asctime)s:%(levelname)s: %(message)s', filename='a
 # logging.basicConfig(level=logging.DEBUG)
 logging.error("started")
 
-sysCtrl.checkRunning()
-
-charger = goecharger.chargerClass("192.168.178.201")
 config = configuration.configClass()
-# print("test4")
-homeData = home.homeData()
+
+sysCtrl.checkRunning(config)
+
+charger = goecharger.chargerClass(config)
+homeData = home.homeData(config)
 strategy = chargeStrategy.chargeStrategy(homeData)
-vis = visualization.visualizationClass()
-myCar = car.carClass(vis)
+vis = visualization.visualizationClass(config)
+myCar = car.carClass(vis, config)
 pred = powerPrediction.PredictionClass()
 
 cycleCounter = 0  # neuer Wert erst nach 2h
 while True:#
     #try:
     cycleCounter = cycleCounter + 1
-    flgExe, dT = sysCtrl.executeTask(60*120, 0)#60*60)
+    flgExe, dT = sysCtrl.executeTask(60*120, 60*60)#60*60)
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 120min task###")
         #print("### start 120min Task ###")
@@ -49,6 +50,8 @@ while True:#
             else:
                 myCar.newValue = 3
         print("SOC: " + str(myCar.SOC))
+
+################### 60 min Task ############
     flgExe, dT = sysCtrl.executeTask(60*60, 1)
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 60min task###")
@@ -62,18 +65,19 @@ while True:#
     if flgExe:
         print ("dT = " + str(dT))
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 20s task###")
+        currData = {}
         charger.updateVals()
         homeData.update(charger, dT)
         pred.updateSOCLims(homeData)
         myCar.model(dT, charger)
-        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger, myCar, pred)
-        vis.writeCSV(homeData, charger, myCar)
+        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger, myCar, pred, config)
+        vis.writeCSV(homeData, charger, myCar, config)
         print("cycle finished: {0}".format(str(cycleCounter)))
         logging.error("cycle finished: " + str(cycleCounter))
-    flgExe, dT = sysCtrl.executeTask(60, 0)
+    flgExe, dT = sysCtrl.executeTask(60, 20)
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 60s task###")
-        vis.plotData(pred)
+        vis.plotData(pred, config)
         #except Exception as e:
         #    print(e)
          #   logging.error('Exception outer: ')

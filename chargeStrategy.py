@@ -22,25 +22,20 @@ class chargeStrategy:
         self.tiLastCharge = datetime.datetime.now()
         self.ratSOCTar = home.SOC
         self.flgSOCHoldActv = False
+        self.stChargeMode=0
 
     def toTimestamp(self, d):
         return d.timestamp()
 
-    def calcStrategy(self, homeData, csvname, charger, myCar, pred):
+    def calcStrategy(self, homeData, csvname, charger, myCar, pred, config):
 
         powDes = 0
+        try:
+            with open(config.dataFolder + 'input.txt', 'r') as status:
+                self.stChargeMode = int(status.read())
+        except Exception as e:
+            print("Error reading stChargeMode from input.txt:", e)
 
-        with open('/home/pi/Entwicklung/input.txt', 'r') as status:
-            stChargeMode = int(status.read())
-
-        if os.path.isfile(csvname):
-            data = csv.reader(open(csvname, 'r'))
-            i = 0
-            for row in data:
-                i = i + 1
-                if i > 1:
-                    if len(row) > 8:
-                        SwitchActive = int(row[8])
 
         OFF = 0
         ON = 1
@@ -50,7 +45,7 @@ class chargeStrategy:
         MANUAL = 5
         AUTO = 6
 
-        homeData.stChargeMode = stChargeMode
+        homeData.stChargeMode = self.stChargeMode
 
 
         if charger.power > 0:
@@ -58,11 +53,11 @@ class chargeStrategy:
 
 
         flgAllow1P = True
-        if stChargeMode == OFF:
+        if self.stChargeMode == OFF:
             pwrAvl = 0
-        if stChargeMode == ON:
+        if self.stChargeMode == ON:
             pwrAvl = 11000
-        if stChargeMode >= AUTO_CUTOFF:
+        if self.stChargeMode >= AUTO_CUTOFF:
             if len(pred.date_a) > 0:
                 timeNow_ts = pred.toTimestamp(datetime.datetime.now())
                 dateDay_a_ts = [pred.toTimestamp(pred.date_a[n]) for n in range(0, len(pred.date_a))]
@@ -72,10 +67,10 @@ class chargeStrategy:
                 maxSOCVehExcessChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehExcessChrg_a)(timeNow_ts)
                 minSOCHomeExcessChargeMin = interpolate.interp1d(dateDay_a_ts, pred.minSOCHome_a)(timeNow_ts)
                 minSOCHomeExcessChargeMax = interpolate.interp1d(dateDay_a_ts, pred.minSOCHomeLowProd_a)(timeNow_ts)
-                if  (stChargeMode == AUTO and myCar.SOC < maxSOCVehProdChrg) or stChargeMode == AUTO_HIGH:
+                if  (self.stChargeMode == AUTO and myCar.SOC < maxSOCVehProdChrg) or self.stChargeMode == AUTO_HIGH:
                     minSOCHomeExcessCharge = minSOCHomeExcessChargeMin
                 else:
-                    if stChargeMode == AUTO_LOW:
+                    if self.stChargeMode == AUTO_LOW:
                         minSOCHomeExcessCharge = minSOCHomeExcessChargeMax
                     else:
                         minSOCHomeExcessCharge = minSOCHomeExcessChargeMin + (minSOCHomeExcessChargeMax - minSOCHomeExcessChargeMin) * (myCar.SOC - maxSOCVehProdChrg)/(maxSOCVehExcessChrg - maxSOCVehProdChrg)
@@ -118,7 +113,7 @@ class chargeStrategy:
                 pwrAvlExcChrg_HomeSuff = 0
                 pwrAvlExcChrg_BattOff = 0
                 pwrAvlExcChrg_Min = 0
-                if (stChargeMode == AUTO and myCar.SOC > maxSOCVehExcessChrg) or stChargeMode == AUTO_CUTOFF:  # above upper limit for prediction based smart charging. only charge if otherwise, power would be cut
+                if (self.stChargeMode == AUTO and myCar.SOC > maxSOCVehExcessChrg) or self.stChargeMode == AUTO_CUTOFF:  # above upper limit for prediction based smart charging. only charge if otherwise, power would be cut
                     pwrAvl = pwrAvlCutOff
                     # pwrAvl = int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn
                     flgAllow1P = True
@@ -132,7 +127,7 @@ class chargeStrategy:
                     else:
                         pwrAvlExcChrg = int(homeData.Prod) - int(homeData.Cons_home) + min(-pred.maxBattPowDischa,
                             max((homeData.SOC - minSOCHomeExcessCharge) * 500, - pred.maxBattPowChrg))
-                    if stChargeMode == AUTO:
+                    if self.stChargeMode == AUTO:
                         __maxChrg = (maxSOCVehExcessChrg - myCar.SOC) * 5000
                         pwrAvlExcChrg_HomeSuff = min(pwrAvlExcChrg, __maxChrg)
                     else:
@@ -141,7 +136,7 @@ class chargeStrategy:
                     if homeData.SOC < minSOCHomeExcessCharge:
                         pwrAvlExcChrg_Min = max(0, int(homeData.Prod) - int(homeData.Cons_home) - pred.maxBattPowChrg - 100)
 
-                    if myCar.SOC > maxSOCVehProdChrg or stChargeMode == AUTO_LOW or stChargeMode == AUTO_HIGH:  # above upper limit for normal smart charging. charge when above minimum house SOC
+                    if myCar.SOC > maxSOCVehProdChrg or self.stChargeMode == AUTO_LOW or self.stChargeMode == AUTO_HIGH:  # above upper limit for normal smart charging. charge when above minimum house SOC
                         flgAllow1P = True
                         _sun = sun(pred.city.observer, tzinfo=pred.berlin)
                         _sunset=(_sun["sunset"])
@@ -160,7 +155,7 @@ class chargeStrategy:
                 pwrAvl = 0
 
         try:
-            if stChargeMode != MANUAL:
+            if self.stChargeMode != MANUAL:
                 # asyncio.run(plug.update())
                 charger.setPower(pwrAvl, flgAllow1P)
 

@@ -10,7 +10,7 @@ class carClass:
     newValue = 0
     _oldState = 2
 
-    def __init__(self, vis):
+    def __init__(self, vis, config):
         self.SOC = vis.readVal("SOC_Car")
         self._oldState = vis.readVal("CarStatus")
 

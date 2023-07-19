@@ -12,7 +12,8 @@ from vsr import VSR
 logging.basicConfig(format='[%(asctime)s] [%(name)s::%(levelname)s] %(message)s', datefmt='%d/%m/%Y %H:%M:%S')
 
 logger = logging.getLogger('API')
-logger.setLevel(10)#logging.getLogger().level)
+#logger.setLevel(10)
+logger.setLevel(logging.getLogger().level)
 
 class VWError(Exception):
     def __init__(self, message):
