@@ -1,0 +1,6 @@
+.venv/
+.vscode/
+_backup/
+__pycache__/
+data/
+credentials.py

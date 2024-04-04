@@ -28,9 +28,11 @@ class sysCtrlClass:
         if os.path.isfile(pidfile):
             try:
                 with open(pidfile, 'r') as pidFileStream:
+                    
+                    pidFromFile = int(pidFileStream.read())
+                    
+                    print("pid in file: " + str(pidFromFile))
                     if pidFromFile != pid:
-                        pidFromFile = int(pidFileStream.read())
-                        print("pid in file: " + str(pidFromFile))
                         if (self.check_pid(pidFromFile)):
                             print("pid exists, exiting")
                             sys.exit()
