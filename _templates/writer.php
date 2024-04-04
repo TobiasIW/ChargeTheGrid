@@ -7,8 +7,9 @@ $val = $_GET['val'];
   //  $val="0"
 
 // if the code string is not empty then open the target file and put form data in it
-
+    echo "PHP gestartet";
     $file = fopen("input.txt", "w");
+    echo "Datei geöffnet";
     //echo fwrite($file, $cd);
   fwrite($file, $val);
     // show a success msg 

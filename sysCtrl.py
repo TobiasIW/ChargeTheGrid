@@ -28,13 +28,16 @@ class sysCtrlClass:
         if os.path.isfile(pidfile):
             try:
                 with open(pidfile, 'r') as pidFileStream:
-                    pidFromFile = int(pidFileStream.read())
-                    print("pid in file: " + str(pidFromFile))
-                    if (self.check_pid(pidFromFile)):
-                        print("pid exists, exiting")
-                        sys.exit()
+                    if pidFromFile != pid:
+                        pidFromFile = int(pidFileStream.read())
+                        print("pid in file: " + str(pidFromFile))
+                        if (self.check_pid(pidFromFile)):
+                            print("pid exists, exiting")
+                            sys.exit()
+                        else:
+                            print("pid does not exist")
                     else:
-                        print("pid does not exist")
+                        print("pid in file is the same as current pid")
             except Exception as e:
                 print("Exception: pid file invalid: ", e)
         else:

@@ -10,7 +10,11 @@ do
   sudo cp /home/pi/chargeOS_v2/data/plotly_plot.html /var/www/html/
   sudo cp /home/pi/chargeOS_v2/data/graph.svg /var/www/html/
   sudo cp /var/www/html/input.txt /home/pi/chargeOS_v2/data/
-  sudo cp /home/pi/chargeOS_v2/_templates/index_neu.html /var/www/html/
+  sudo cp /var/www/html/input.txt /home/pi/chargeOS_v2/data/
+  sudo cp cp /var/www/html/dailyCons.json /home/pi/chargeOS_v2/config/
+  sudo cp /home/pi/chargeOS_v2/_templates/index_neu.html /var/www/html/index.html
+  sudo cp /home/pi/chargeOS_v2/_templates/*.php /var/www/html/
+
   echo $SECONDS >> /home/pi/my.log
   sleep 10
 done

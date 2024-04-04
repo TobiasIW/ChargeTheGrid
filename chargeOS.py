@@ -35,10 +35,10 @@ cycleCounter = 0  # neuer Wert erst nach 2h
 while True:#
     #try:
     cycleCounter = cycleCounter + 1
-    flgExe, dT = sysCtrl.executeTask(60*120, 60*60)#60*60)
+    flgExe, dT = sysCtrl.executeTask(60*5, 30)#60*60)
     if flgExe:
-        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 120min task###")
-        #print("### start 120min Task ###")
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 5min task###")
+
         try:
             myCar.getInfo()
         except Exception as e:
@@ -50,6 +50,7 @@ while True:#
             else:
                 myCar.newValue = 3
         print("SOC: " + str(myCar.SOC))
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### end 5min task###")
 
 ################### 60 min Task ############
     flgExe, dT = sysCtrl.executeTask(60*60, 1)
@@ -61,6 +62,7 @@ while True:#
             print(e)
             logging.error("Exception prediction: ")
             logging.error(e)
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### end 60min task###")
     flgExe, dT = sysCtrl.executeTask(20, 0)
     if flgExe:
         print ("dT = " + str(dT))
@@ -74,15 +76,18 @@ while True:#
         vis.writeCSV(homeData, charger, myCar, config)
         print("cycle finished: {0}".format(str(cycleCounter)))
         logging.error("cycle finished: " + str(cycleCounter))
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### end 20s task###")
+
     flgExe, dT = sysCtrl.executeTask(60, 20)
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 60s task###")
         vis.plotData(pred, config)
+        sysCtrl.checkRunning(config)
         #except Exception as e:
         #    print(e)
          #   logging.error('Exception outer: ')
           #  logging.error(e)
-
+        print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### end 60s task###")
     time.sleep(1)
 # except:
 #    print("abbruch chargeOS")

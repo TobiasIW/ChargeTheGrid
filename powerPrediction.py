@@ -35,7 +35,7 @@ class PredictionClass:
         self.consPer100km = 15000.0  # Wh/100km
         self.anglZenithPwrDiff_a = [90, 60, 30, 0]
         self.pwrDiff_a = [0, 0.04, 0.06, 0.07]
-        self.dailyConsPath = "/home/pi/Entwicklung/dailyCons.json"
+        self.dailyConsPath = "/home/pi/chargeOS_v2/config/dailyCons.json"
         self.powProd_a = []
         self.powProdLow_a = []
         self.powCons_a = []
