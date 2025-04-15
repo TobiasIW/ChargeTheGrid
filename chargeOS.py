@@ -29,7 +29,7 @@ homeData = home.homeData(config)
 strategy = chargeStrategy.chargeStrategy(homeData)
 vis = visualization.visualizationClass(config)
 myCar = car.carClass(vis, config)
-pred = powerPrediction.PredictionClass()
+pred = powerPrediction.PredictionClass(config)
 
 cycleCounter = 0  # neuer Wert erst nach 2h
 while True:#
@@ -59,6 +59,8 @@ while True:#
         try:
             pred.updatePrediction()
         except Exception as e:
+            
+            print("Exception prediction:")
             print(e)
             logging.error("Exception prediction: ")
             logging.error(e)
@@ -82,7 +84,7 @@ while True:#
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 60s task###")
         vis.plotData(pred, config)
-        sysCtrl.checkRunning(config)
+        #sysCtrl.checkRunning(config)
         #except Exception as e:
         #    print(e)
          #   logging.error('Exception outer: ')

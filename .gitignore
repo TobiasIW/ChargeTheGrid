@@ -1,6 +1,12 @@
 .venv/
+venv/
 .vscode/
 _backup/
 __pycache__/
 data/
 credentials.py
+aaPyLog.log
+_templates-20250413T114723Z-001.zip
+requirements.txt~
+chargePid.pid
+.gitignore

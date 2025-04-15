@@ -1,7 +1,7 @@
 import json
 class configClass:
     def __init__(self):
-        self.baseFolder = "/home/pi/chargeOS_v2/"
+        self.baseFolder = "/home/pi/ChargeOS_v2/ChargeTheGrid/"
 
         self.dataFolder =  self.baseFolder + "data/"
         self.configFolder = self.baseFolder + "config/"

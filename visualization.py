@@ -408,6 +408,8 @@ class visualizationClass:
         # Display the plot
         #fig.write_html(config.dataFolder + 'plotly_plot.html')
         pio.write_html(fig, config.dataFolder + 'plotly_plot.html', full_html=False)
+        plt.close('all')
+        del fig
 
 
 

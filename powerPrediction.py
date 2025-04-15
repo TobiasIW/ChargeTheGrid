@@ -21,7 +21,7 @@ class PredictionClass:
     maxPowInv_C = 7000
     maxFeedIn = 6700  # maximale Einspeiseleistung W
 
-    def __init__(self):
+    def __init__(self, config):
         self.berlin = pytz.timezone("Europe/Berlin")
         self.azimuthPV = np.array([118, 208, 298])
         self.zenithPV = np.array([35, 35, 35])
@@ -35,7 +35,7 @@ class PredictionClass:
         self.consPer100km = 15000.0  # Wh/100km
         self.anglZenithPwrDiff_a = [90, 60, 30, 0]
         self.pwrDiff_a = [0, 0.04, 0.06, 0.07]
-        self.dailyConsPath = "/home/pi/chargeOS_v2/config/dailyCons.json"
+        self.dailyConsPath = config.configFolder + "dailyCons.json"
         self.powProd_a = []
         self.powProdLow_a = []
         self.powCons_a = []
@@ -243,7 +243,7 @@ class PredictionClass:
 
         # s = sun(city.observer, date=datetime.date.today())
         response = requests.get(
-            "http://api.openweathermap.org/data/2.5/onecall?lat=48.9805&lon=8.98356&exclude=minutely&appid=d2d5732789261d036171254607f31898")
+            "http://api.openweathermap.org/data/3.0/onecall?lat=48.9805&lon=8.98356&exclude=minutely&appid=d2d5732789261d036171254607f31898")
 
         for myhour in response.json()['hourly']:
             date_simpl = datetime.datetime.fromtimestamp(myhour["dt"])

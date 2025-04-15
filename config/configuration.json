@@ -1,0 +1,12 @@
+{
+  "wb": {
+    "IP": "192.168.178.201",
+    "model": "go-E",
+    "protocol": "native"
+  },
+  "battery": {
+    "IP": "192.168.178.100",
+    "model": "sonnen",
+    "protocol": "native"
+  }
+}
