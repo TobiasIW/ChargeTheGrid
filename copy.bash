@@ -2,8 +2,16 @@
 n=0
 SECONDS=0
 # /usr/bin/python3.7 /home/pi/ChargeOS_v2/ChargeTheGrid/chargeOS.py >> /home/pi/my.log 2>&1
-cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/bat_stats.csv /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/bat_stats_$(date --date="1 day ago" +\%F).csv
-cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/graph.svg /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/graph_$(date --date="1 day ago" +\%F).svg
+# archive bat_stats.csv from yesterday if it does not exist yet
+if [ ! -f /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/bat_stats_$(date --date="1 day ago" +\%F).csv ]; then
+  cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/bat_stats.csv /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/bat_stats_$(date --date="1 day ago" +\%F).csv
+  # replace bat_stats.csv with template
+  cp /home/pi/ChargeOS_v2/ChargeTheGrid/_templates/bat_stats_templ.csv /home/pi/ChargeOS_v2/ChargeTheGrid/data/bat_stats.csv
+fi
+# archive graph.svg from yesterday if it does not exist yet
+if [ ! -f /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/graph_$(date --date="1 day ago" +\%F).svg ]; then
+  cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/graph.svg /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/graph_$(date --date="1 day ago" +\%F).svg
+fi
 
 while [ $SECONDS -le 60 ]
 do

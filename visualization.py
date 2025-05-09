@@ -41,17 +41,19 @@ class visualizationClass:
     Car_SOC_a = []
 
     def readVal(self, Attr):
-
         with open(self.csvname, mode='r') as csvfile:
-            csv_reader = csv.DictReader(csvfile)
-
-            i = 0
-            retVal = 0
-            for row in csv_reader:
-                i += 1
-                if i > 1:  # first line has header
-                    retVal = float(row[Attr])  # use last one only
-        return retVal
+            csv_reader = list(csv.DictReader(csvfile))  # Convert to list for reverse iteration
+            for row in reversed(csv_reader):  # Iterate from the last row to the first
+                try:
+            # Check if the value is None or empty
+                    if row[Attr] is None or row[Attr] == "":
+                        print(f"Skipping invalid value (None or empty) in column '{Attr}': {row[Attr]}")
+                        continue
+                    return float(row[Attr])  # Return the first valid value found
+                except (ValueError, TypeError) as e:
+                    print(f"Error converting value in column '{Attr}': {row[Attr]} - {e}")
+                
+        return 0  # Return 0 if no valid value is found
 
     def writeCSV(self, homeData, charger, myCar, config):
         with open(self.csvname, 'a', newline='') as csvfile:
@@ -99,7 +101,9 @@ class visualizationClass:
         df = pd.DataFrame({'index': self.Time_a, 'consumption': self.Cons_a, 'production': self.Prod_a})
         pd.options.plotting.backend= "plotly"
         __current_date = datetime.datetime.now().date()
+        ' Check if the first date in Time_a is from today'
         __is_from_today = self.Time_a[0].date() == __current_date
+        
         if __is_from_today:
             self.__init__(config)
         a=1
@@ -129,7 +133,6 @@ class visualizationClass:
     def __init__(self, config):
         self.clear()
         self.csvname = config.dataFolder + "bat_stats.csv"
-        self.dfCsvName = config.dataFolder + "df.csv"
         self.berlin = pytz.timezone("Europe/Berlin")
         try:
             data = csv.reader(open(self.csvname, 'r'))
