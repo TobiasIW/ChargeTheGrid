@@ -15,7 +15,7 @@ class PredictionClass:
     latitude = 48.9805
     longitude = 8.98356
     qBatt = 8000  # Batteriekapazität Hausbattereie 8kWh
-    qVeh = 34000
+    qVeh = 76000
     maxBattPowDischa = -3300
     maxBattPowChrg = 3300
     maxPowInv_C = 7000
@@ -32,7 +32,7 @@ class PredictionClass:
         self.maxSOCVehTarProdChrg = 70
         self.maxSOCVehTarExcessChrg = 90
 
-        self.consPer100km = 15000.0  # Wh/100km
+        self.consPer100km = 18000.0  # Wh/100km
         self.anglZenithPwrDiff_a = [90, 60, 30, 0]
         self.pwrDiff_a = [0, 0.04, 0.06, 0.07]
         self.dailyConsPath = config.configFolder + "dailyCons.json"

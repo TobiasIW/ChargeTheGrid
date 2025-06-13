@@ -24,9 +24,9 @@ async def get_vehicle_soc():
         # Fetch and print the State of Charge (SOC) for each vehicle
         for vehicle in account._vehicles:
             soc = vehicle.state_of_charge
-            print("charging power:", vehicle.charging_power)
+            print("Audi charging power:", vehicle.charging_power)
 
-            print(f"Vehicle VIN: {vehicle.vin}, State of Charge: {soc}%")
+            print(f"Audi Vehicle VIN: {vehicle.vin}, State of Charge: {soc}%")
 
 # Entry point for testing
 if __name__ == "__main__":

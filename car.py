@@ -1,11 +1,16 @@
 import logging
 from weconnect import weconnect
-
+import asyncio
+from aiohttp import ClientSession
+from audiconnect.audi_connect_account import AudiConnectAccount
+import datetime
 class carClass:
     SOC = 0.0
     newValue = 0
     _oldState = 2
-
+    # initialize lastChange to minimum value
+    # This will be updated when the SOC is fetched
+    lastChange = datetime.datetime.min
     def __init__(self, vis, carConfig):
         self.SOC = vis.readVal("SOC_Car")
         self._oldState = vis.readVal("CarStatus")
@@ -59,14 +64,61 @@ class carClass:
                 if vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.enabled:
                     print('#  battery status')
                     print(vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.value)
+                    
+                    
+                    #if vehicle.domains["charging"]["batteryStatus"]["currentSOC_pct"].lastUpdatefromServer is not None:
+                        #print('#  last update from server')
+                        #if vehicle.domains["charging"]["batteryStatus"]["currentSOC_pct"].lastUpdatefromServer > self.lastChange:
+                            #self.lastChange = vehicle.domains["charging"]["batteryStatus"]["currentSOC_pct"].lastUpdatefromServer
                     self.SOC = float(vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.value)
+                            #self.lastChange = vehicle.domains["charging"]["batteryStatus"].lastUpdatefromServer
                     if self.newValue == 0:
                         self.newValue = 1
                     else:
                         self.newValue = 0
 
-    def _handleAudiProtocol(self, carConfig):
-        print("Audi protocol is not yet implemented.")
-        self.SOC = 0  # Placeholder value for SOC
+    def _handleAudiProtocol(self, carConfig)    :
+        """Handle the Audi protocol to fetch vehicle information."""
+        print("Audi protocol selected.")    
+        # Use asyncio to run the Audi_get_vehicle_soc method
+        asyncio.run(self.Audi_get_vehicle_soc(carConfig))
 
+
+    async def Audi_get_vehicle_soc(self, carConfig):
+        """Fetch the State of Charge (SOC) for all vehicles associated with the Audi account."""
+        # Hardcoded credentials (replace with your own)
+        username = carConfig["carUser"]
+        password = carConfig["carPassword"]
+
+        country = "DE"  # Example country code
+        spin = ""  # Optional, if required by the API
+        api_level = 1  # Example API level
+        print ("start async session")
+        async with ClientSession() as session:
+            # Initialize the AudiConnectAccount
+            account = AudiConnectAccount(session, username, password, country, spin, api_level)
+
+            # Log in to the Audi service
+            print("Logging in to Audi Connect...")
+            await account.login()
+
+            # Update vehicle information
+            print("Updating vehicle information...")
+            await account.update(None)
+
+            # Fetch and print the State of Charge (SOC) for each vehicle
+            print("Fetching vehicle information...")
+            for vehicle in account._vehicles:
+                # Check Car 
+                print("Checking vehicle:", vehicle.vin)
+
+                soc = vehicle.state_of_charge
+                self.SOC = float(soc)
+                if self.newValue == 0:
+                    self.newValue = 1
+                else:
+                    self.newValue = 0
+                print("Audi charging power:", vehicle.charging_power)
+
+                print(f"Audi Vehicle VIN: {vehicle.vin}, State of Charge: {soc}%")
 

@@ -24,11 +24,18 @@ config = configuration.configClass()
 
 sysCtrl.checkRunning(config)
 
-charger = goecharger.chargerClass(config)
+#charger = goecharger.chargerClass(config)
 homeData = home.homeData(config)
 strategy = chargeStrategy.chargeStrategy(homeData)
 vis = visualization.visualizationClass(config)
-myCar = car.carClass(vis, config.combo[0])
+# create a myCar array the same size as the combo array
+myCar = []
+charger=[]
+for i in range(len(config.combo)):
+    # create a car object for each combo
+    myCar.append(car.carClass(vis, config.combo[i]))
+    charger.append(goecharger.chargerClass(config.combo[i]))
+#myCar = car.carClass(vis, config.combo[0])
 pred = powerPrediction.PredictionClass(config)
 
 cycleCounter = 0  # neuer Wert erst nach 2h
@@ -39,17 +46,19 @@ while True:#
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 5min task###")
 
-        try:
-            myCar.getInfo(config.combo[0])
-        except Exception as e:
-            print(e)
-            logging.error("Exception SOC: ")
-            logging.error(e)
-            if myCar.newValue == 3:
-                myCar.newValue = 2
-            else:
-                myCar.newValue = 3
-        print("SOC: " + str(myCar.SOC))
+        
+        for i in range(len(config.combo)):
+            # get the car info for each car in the combo array
+            try:
+                myCar[i].getInfo(config.combo[i])
+
+            except Exception as e:
+                print(e)
+                logging.error("Exception SOC: ")
+                logging.error(e)
+
+        for i in range(len(config.combo)):
+            print("SOC: " + str(myCar[i].SOC))
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### end 5min task###")
 
 ################### 60 min Task ############
@@ -70,12 +79,15 @@ while True:#
         print ("dT = " + str(dT))
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 20s task###")
         currData = {}
-        charger.updateVals()
-        homeData.update(charger, dT)
+        for i in range(len(config.combo)):
+            # update the charger values for each charger in the combo array
+            charger[i].updateVals()
+            myCar[i].modelUpdateSOC(dT, charger[i])
+        homeData.update(charger[1], dT)
         pred.updateSOCLims(homeData)
-        myCar.modelUpdateSOC(dT, charger)
-        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger, myCar, pred, config)
-        vis.writeCSV(homeData, charger, myCar, config)
+        
+        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger[1], myCar[1], pred, config)
+        vis.writeCSV(homeData, charger[1], myCar[1], config)
         print("cycle finished: {0}".format(str(cycleCounter)))
         logging.error("cycle finished: " + str(cycleCounter))
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### end 20s task###")

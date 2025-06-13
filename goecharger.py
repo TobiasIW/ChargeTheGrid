@@ -24,27 +24,28 @@ class chargerClass:
     MAX = 2
 
     def __init__(self, config):
-        self.ip = config.combo[0]["wbIP"]
+        self.ip = config["wbIP"]
         self.flg1P = False
         self.flgPluggedIn = False
     def updateVals(self):
         print("1")
         try:
             response = requests.get(f"http://" + self.ip + "/api/status?filter=car,nrg")
+        
+            # print("1")
+            # print(self.ip)
+            # print(response)
+            self.state = response.json()["car"]
+            if self.state == 1:
+                self.flgPluggedIn = False
+            else:
+                self.flgPluggedIn = True
+            # print("1")
+            myList = response.json()["nrg"]
+            self.power = myList[11]
+            print(self.power)
         except Exception as e:
             print(e)
-        # print("1")
-        # print(self.ip)
-        # print(response)
-        self.state = response.json()["car"]
-        if self.state == 1:
-            self.flgPluggedIn = False
-        else:
-            self.flgPluggedIn = True
-        # print("1")
-        myList = response.json()["nrg"]
-        self.power = myList[11]
-        print(self.power)
 
 
 

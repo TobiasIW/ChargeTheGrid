@@ -104,7 +104,7 @@ class visualizationClass:
         ' Check if the first date in Time_a is from today'
         __is_from_today = self.Time_a[0].date() == __current_date
         
-        if __is_from_today:
+        if not __is_from_today:
             self.__init__(config)
         a=1
     def clear(self):
@@ -140,25 +140,29 @@ class visualizationClass:
             for row in data:
                 i = i + 1
                 if i > 1:
+                    try: 
 
-                    self.SOC_a.append(float(row[0]))
-                    self.Prod_a.append(int(row[1]))
-                    self.Cons_a.append(int(row[2]))
-                    self.Batt_pow_a.append(int(row[3]))
-                    self.GridFeedIn_pow_a.append(int(row[4]))
-                    self.OperatingMode_a.append(int(row[5]))
-                    self.SystemStatus_a.append(row[6])
-                    self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
+                        self.SOC_a.append(float(row[0]))
+                        self.Prod_a.append(int(row[1]))
+                        self.Cons_a.append(int(row[2]))
+                        self.Batt_pow_a.append(int(row[3]))
+                        self.GridFeedIn_pow_a.append(int(row[4]))
+                        self.OperatingMode_a.append(int(row[5]))
+                        self.SystemStatus_a.append(row[6])
+                        self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
 
 
 
-                    self.newValueSOCCar_a.append(int(row[8]))
-                    self.stChargeMode_a.append(int(row[9]))
-                    self.flgAuto_a.append(int(row[10]))
-                    self.ConsHome_a.append(int(row[11]))  # int(row[10]))
-                    self.Car_SOC_a.append(float(row[12]))
+                        self.newValueSOCCar_a.append(int(row[8]))
+                        self.stChargeMode_a.append(int(row[9]))
+                        self.flgAuto_a.append(int(row[10]))
+                        self.ConsHome_a.append(int(row[11]))  # int(row[10]))
+                        self.Car_SOC_a.append(float(row[12]))
 
-                    self.x.append(i)
+                        self.x.append(i)
+                    except:
+                         print("Exception: invalid csv row: ", row)
+                         i -= 1  # Decrement i to not count this row
             time_delta_a = [self.Time_a[n].timestamp() / 3600000 for n in range(0, len(self.Time_a))]
             self.FeedIn_pow = [max(0, self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
             self.Grid_Consumption_pow = [max(0, -self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
