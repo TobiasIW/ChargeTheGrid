@@ -1,18 +1,17 @@
 import logging
-import credentials
 from weconnect import weconnect
 
 class carClass:
     SOC = 0.0
-    capacityWs = 34 * 1000 * 3600
     newValue = 0
     _oldState = 2
 
-    def __init__(self, vis, config):
+    def __init__(self, vis, carConfig):
         self.SOC = vis.readVal("SOC_Car")
         self._oldState = vis.readVal("CarStatus")
-
-    def model(self, dT_s, charger):
+        self.capacityWs =carConfig["carCapacity"]* 1000 * 3600  # Convert kWh to Ws
+        
+    def modelUpdateSOC(self, dT_s, charger):
         _state = int(charger.state)
         if (_state == 2) or (_state == 4):
             _power = float(charger.power)
@@ -34,8 +33,19 @@ class carClass:
         self.SOC = float(self.SOC) + 100 * ((_power * dT_s) / self.capacityWs)
         self._oldState = _state
 
-    def getInfo(self):
-        weConnect = weconnect.WeConnect(username=credentials.username, password=credentials.password, updateAfterLogin=False, loginOnInit=False)
+    def getInfo(self, carConfig):
+        if carConfig["carProtocol"] == "VW":
+            self._handleVWProtocol(carConfig)
+        elif carConfig["carProtocol"] == "Audi":
+            self._handleAudiProtocol(carConfig)
+            
+        else:
+            print(f"Error: Protocol '{carConfig['carProtocol']}' is not supported.")
+            logging.error(f"Unsupported protocol: {carConfig['carProtocol']}")
+            raise ValueError(f"Unsupported protocol: {carConfig['carProtocol']}")
+
+    def _handleVWProtocol(self, carConfig):
+        weConnect = weconnect.WeConnect(username=carConfig["carUser"], password=carConfig["carPassword"], updateAfterLogin=False, loginOnInit=False)
         print('#  Login')
         weConnect.login()
         print('#  update')
@@ -43,17 +53,20 @@ class carClass:
         print('#  print results')
         for vin, vehicle in weConnect.vehicles.items():
             del vin
-            
             if "charging" in vehicle.domains \
-                        and "batteryStatus" in vehicle.domains["charging"] \
-                        and vehicle.domains["charging"]["batteryStatus"].enabled:
-                    if vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.enabled:
-                        print('#  battery status')
-                        print(vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.value)
-                        self.SOC = float(vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.value)
-                        if (self.newValue == 0):
-                            self.newValue = 1
-                        else:
-                            self.newValue = 0
-               
+                    and "batteryStatus" in vehicle.domains["charging"] \
+                    and vehicle.domains["charging"]["batteryStatus"].enabled:
+                if vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.enabled:
+                    print('#  battery status')
+                    print(vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.value)
+                    self.SOC = float(vehicle.domains["charging"]["batteryStatus"].currentSOC_pct.value)
+                    if self.newValue == 0:
+                        self.newValue = 1
+                    else:
+                        self.newValue = 0
+
+    def _handleAudiProtocol(self, carConfig):
+        print("Audi protocol is not yet implemented.")
+        self.SOC = 0  # Placeholder value for SOC
+
 

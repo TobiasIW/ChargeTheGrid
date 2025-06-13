@@ -1,12 +1,38 @@
 {
-  "wb": {
-    "IP": "192.168.178.201",
-    "model": "go-E",
-    "protocol": "native"
-  },
+  
   "battery": {
     "IP": "192.168.178.100",
     "model": "sonnen",
     "protocol": "native"
-  }
+  },
+  "combos": [
+    {
+      "car": {               
+        "name": "Golf",
+        "protocol": "VW",
+        "user": "t.weiberle@gmail.com",
+        "password": "Linux1234",
+        "capacity": 34
+      },
+      "wb": {
+        "IP": "192.168.178.201",
+        "name": "Garage",
+        "protocol": "go-E"
+      }
+    },
+    {
+      "car": {
+        "name": "Audi",
+        "protocol": "Audi",
+        "user": "user",
+        "password": "password",
+        "capacity": 76
+      },
+      "wb": {
+        "IP": "192.168.178.202",
+        "name": "Carport",
+        "protocol": "go-E"
+      }
+    }
+  ]
 }

@@ -28,7 +28,7 @@ charger = goecharger.chargerClass(config)
 homeData = home.homeData(config)
 strategy = chargeStrategy.chargeStrategy(homeData)
 vis = visualization.visualizationClass(config)
-myCar = car.carClass(vis, config)
+myCar = car.carClass(vis, config.combo[0])
 pred = powerPrediction.PredictionClass(config)
 
 cycleCounter = 0  # neuer Wert erst nach 2h
@@ -40,7 +40,7 @@ while True:#
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 5min task###")
 
         try:
-            myCar.getInfo()
+            myCar.getInfo(config.combo[0])
         except Exception as e:
             print(e)
             logging.error("Exception SOC: ")
@@ -73,7 +73,7 @@ while True:#
         charger.updateVals()
         homeData.update(charger, dT)
         pred.updateSOCLims(homeData)
-        myCar.model(dT, charger)
+        myCar.modelUpdateSOC(dT, charger)
         homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger, myCar, pred, config)
         vis.writeCSV(homeData, charger, myCar, config)
         print("cycle finished: {0}".format(str(cycleCounter)))
