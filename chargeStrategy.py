@@ -23,11 +23,12 @@ class chargeStrategy:
         self.ratSOCTar = home.SOC
         self.flgSOCHoldActv = False
         self.stChargeMode=0
-
+        self.filterTime = 5*60 # 5 minutes
+        self.pwrAvlFltd = 0
     def toTimestamp(self, d):
         return d.timestamp()
 
-    def calcStrategy(self, homeData, csvname, charger, myCar, pred, config):
+    def calcStrategy(self, homeData, csvname, charger, myCar, pred, config, dt):
 
         powDes = 0
         try:
@@ -95,14 +96,14 @@ class chargeStrategy:
                     print("hold3 ")
 
 
-                if abs(homeData.SOC-self.ratSOCTar)>=3:
+                if abs(homeData.SOC-self.ratSOCTar)>=homeData.ratSOCMinOper:
                         self.ratSOCTar = homeData.SOC
                 print("hold5 " + str(self.ratSOCTar))
-                self.ratSOCTar = min(max(self.ratSOCTar, minSOCHomeExcessCharge), 97)
+                self.ratSOCTar = min(max(self.ratSOCTar, minSOCHomeExcessCharge), homeData.ratSOCMaxOper)
 
                 print("ratSOCTar:" + str(self.ratSOCTar))
                 print("minSOC:" + str(minSOCVeh))
-                if homeData.SOC > 97:
+                if homeData.SOC > homeData.ratSOCMaxOper:
                     if int(homeData.Prod) - int(homeData.Cons_home) + int(homeData.Batt_pow) - pred.maxFeedIn > 0:
                         pwrAvlCutOff = max(int(homeData.Prod) - int(homeData.Cons_home) - pred.maxFeedIn, 6 * 230 + 1)
                     else:
@@ -157,9 +158,27 @@ class chargeStrategy:
         try:
             if self.stChargeMode != MANUAL:
                 # asyncio.run(plug.update())
-                charger.setPower(pwrAvl, flgAllow1P)
+                
 
-        except:
-            pass
+                __powerMin= max (0, int(homeData.Prod) - int(homeData.Cons_home) - min(pred.maxBattPowChrg,  (homeData.SOC - homeData.ratSOCMinOper) * 1000))
+                __powerMax= int(homeData.Prod) - int(homeData.Cons_home) - min(pred.maxBattPowDischa, (homeData.ratSOCMaxOper - homeData.SOC ) * 1000)
+                    
+                #filter pwrAvl with a filter time of 5 minutes
+                self.pwrAvlFltd = self.pwrAvlFltd + (pwrAvl - self.pwrAvlFltd) * dt/ self.filterTime
+                self.pwrAvlFltd = max(self.pwrAvlFltd, __powerMin)
+                self.pwrAvlFltd = min(self.pwrAvlFltd, __powerMax)
+                print("pwrAvlFltd: " + str(self.pwrAvlFltd))
+                print("pwrAvl: " + str(pwrAvl))
+                print("pwrAvlMin: " + str(__powerMin))
+                print("pwrAvlMax: " + str(__powerMax))
+                charger.setPower(self.pwrAvlFltd, flgAllow1P, __powerMin, __powerMax)
+            else:
+                # do nothing if in manual mode
+                print
+            
+
+        except Exception as e:
+            print("Exception in chargeStrategy.calcStrategy",e)
+            
         # print("ChargeStratEnd")
         return 0

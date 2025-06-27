@@ -86,7 +86,7 @@ while True:#
         homeData.update(charger[1], dT)
         pred.updateSOCLims(homeData)
         
-        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger[1], myCar[1], pred, config)
+        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger[1], myCar[1], pred, config, dT)
         vis.writeCSV(homeData, charger[1], myCar[1], config)
         print("cycle finished: {0}".format(str(cycleCounter)))
         logging.error("cycle finished: " + str(cycleCounter))

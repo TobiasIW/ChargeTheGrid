@@ -14,10 +14,13 @@ class homeData:
     stChargeMode: float=0
     flgAuto:float=0
     qBattCap = 8000 # Wh
+    ratSOCMinOper = 5 # %
+    ratSOCMaxOper = 97 # %
     flgIni = True
     IP = ""
     def __init__(self, config):
         self.IP = config.homeBattIP
+
     def update(self, charger, dT):
         try:
             response = requests.get(f"http://" + self.IP + ":8080/api/v1/status")

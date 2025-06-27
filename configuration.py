@@ -24,7 +24,8 @@ class configClass:
                 "carCapacity": combo["car"]["capacity"],  # in kWh
                 "wbIP": combo["wb"]["IP"],
                 "wbName": combo["wb"]["name"],
-                "wbProtocol": combo["wb"]["protocol"]
+                "wbProtocol": combo["wb"]["protocol"],
+                "nPhases": combo["car"]["nPhases"]
             })
 
     def openFile(self):

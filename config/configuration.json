@@ -12,7 +12,8 @@
         "protocol": "VW",
         "user": "t.weiberle@gmail.com",
         "password": "Linux1234",
-        "capacity": 34
+        "capacity": 34,
+        "nPhases": 2
       },
       "wb": {
         "IP": "192.168.178.201",
@@ -26,7 +27,8 @@
         "protocol": "Audi",
         "user": "t.weiberle@gmail.com",
         "password": "Linux1234Audi!",
-        "capacity": 76
+        "capacity": 76,
+        "nPhases" : 3
       },
       "wb": {
         "IP": "192.168.178.202",
