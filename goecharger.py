@@ -84,13 +84,13 @@ class chargerClass:
     def setPower(self, power, flgAllw1P, pwrMin, pwrMax):
         # print("setpowerCalled",power)
         if self.flg1P:
-            if power > 230 * 6 - self.pwrHysNeg and pwrMax > 230 * 6 and power < 230 * 16 + self.pwrHysPos and pwrMin < 230 * 16:
+            if power >= 230 * 6 - self.pwrHysNeg and pwrMax >= 230 * 6 and power < 230 * 16 + self.pwrHysPos and pwrMin < 230 * 16:
                 Amp = power / 230
                 Amp = max(6, Amp)
                 Amp = min(Amp, 16)
                 self.flg1P = True
                 print("1 phase")
-            elif power < 230 * 6 + self.pwrHysPos or pwrMax < 230 * 6:
+            elif power < 230 * 6 - self.pwrHysNeg or pwrMax < 230 * 6:
                 Amp = 0
                 self.flg1P = True
                 print("chargin switched off")
@@ -101,14 +101,14 @@ class chargerClass:
                 self.flg1P = False
                 print("switch from 1 phase to multi phase")
         else: # multi phase charging
-            if power > 230 * 6 *self.nPhases - self.pwrHysNeg :
+            if power >= 230 * 6 *self.nPhases - self.pwrHysNeg * self.nPhases and pwrMax >= 230 * 6 * self.nPhases:
                 Amp = power / (230 * self.nPhases)
                 Amp = max(6, Amp)
                 Amp = min(Amp, 16)
                 self.flg1P = False
                 print("multi phase charging")
             else:
-                if power > 230 * 6 - self.pwrHysNeg and pwrMax > 230 * 6:
+                if power > 230 * 6 :
 
                     Amp = power / 230
                     Amp = max(6, Amp)
@@ -117,7 +117,7 @@ class chargerClass:
                     print("switched from multi phase to 1 phase")
                 else:
                     Amp = 0
-                    self.flg1P = False
+                    self.flg1P = True
                     print("charging switched off from multi phase")
 
                 
