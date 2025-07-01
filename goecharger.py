@@ -22,8 +22,8 @@ class chargerClass:
     TARGET = 0
     MIN = 1
     MAX = 2
-    pwrHysNeg = 1000
-    pwrHysPos = 1000
+    pwrHysNeg = 500
+    pwrHysPos = 800
 
     def __init__(self, config):
         self.ip = config["wbIP"]
@@ -86,8 +86,6 @@ class chargerClass:
         if self.flg1P:
             if power >= 230 * 6 - self.pwrHysNeg and pwrMax >= 230 * 6 and power < 230 * 16 + self.pwrHysPos and pwrMin < 230 * 16:
                 Amp = power / 230
-                Amp = max(6, Amp)
-                Amp = min(Amp, 16)
                 self.flg1P = True
                 print("1 phase")
             elif power < 230 * 6 - self.pwrHysNeg or pwrMax < 230 * 6:
@@ -96,23 +94,17 @@ class chargerClass:
                 print("chargin switched off")
             else: # power > 230 * 16 + self.pwrHysPos or pwrMin > 230 * 16:
                 Amp = power / (230 * self.nPhases)
-                Amp = max(6, Amp)
-                Amp = min(Amp, 16)
                 self.flg1P = False
                 print("switch from 1 phase to multi phase")
         else: # multi phase charging
             if power >= 230 * 6 *self.nPhases - self.pwrHysNeg * self.nPhases and pwrMax >= 230 * 6 * self.nPhases:
                 Amp = power / (230 * self.nPhases)
-                Amp = max(6, Amp)
-                Amp = min(Amp, 16)
                 self.flg1P = False
                 print("multi phase charging")
             else:
                 if power > 230 * 6 :
 
                     Amp = power / 230
-                    Amp = max(6, Amp)
-                    Amp = min(Amp, 16)
                     self.flg1P = True
                     print("switched from multi phase to 1 phase")
                 else:
@@ -121,7 +113,9 @@ class chargerClass:
                     print("charging switched off from multi phase")
 
                 
-
+        if Amp >0:
+            Amp = max(6, Amp)
+            Amp = min(Amp, 16)
         print("Amp=", Amp)
         print("1 phase=", self.flg1P)
         if Amp >= 6:

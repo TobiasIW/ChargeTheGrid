@@ -12,7 +12,7 @@ class configClass:
         self.homeBattModel = self.jConfig["battery"]["model"]
         self.homeBattIP = self.jConfig["battery"]["IP"]
         self.homeBattProtocol = self.jConfig["battery"]["protocol"]
-
+        
         # Combos configuration
         self.combo = []  # Initialize an empty array for combos
         for combo in self.jConfig["combos"]:
@@ -27,7 +27,12 @@ class configClass:
                 "wbProtocol": combo["wb"]["protocol"],
                 "nPhases": combo["car"]["nPhases"]
             })
-
+        # create a file with list of configured car names
+        self.carNames = [combo["car"]["name"] for combo in self.jConfig["combos"]]
+        with open(self.configFolder + "carNames.txt", 'w') as f:
+            for name in self.carNames:
+                f.write(name + "\n")
+                
     def openFile(self):
         with open(self._configPath, 'r') as f:
             data = f.read()

@@ -32,7 +32,6 @@ class PredictionClass:
         self.maxSOCVehTarProdChrg = 70
         self.maxSOCVehTarExcessChrg = 90
 
-        self.consPer100km = 18000.0  # Wh/100km
         self.anglZenithPwrDiff_a = [90, 60, 30, 0]
         self.pwrDiff_a = [0, 0.04, 0.06, 0.07]
         self.dailyConsPath = config.configFolder + "dailyCons.json"
@@ -44,13 +43,12 @@ class PredictionClass:
         self.minSOCHomeLowProd_a = []
         self.minSOCHome_C = 4
         self.maxSOCHome_a = []
-        self.minSOCVeh_a = []
-        self.maxSOCVehProdChrg_a = []
-        self.maxSOCVehExcessChrg_a = []
+
         self.city = LocationInfo("Vaihingen", "Germany", "Europe/Berlin", self.latitude, self.longitude)
         self.date_predHomeSOC_a = []
         self.predHomeSOC_a = []
         self.jDailyCons=[]
+        self.carsTotalCap = 0
 
     def getPower(self, date, rClouds):
         azimuth = Location(self.city).solar_azimuth(date)
@@ -82,7 +80,7 @@ class PredictionClass:
 
 
 
-    def updateSOCLims(self, home):
+    def updateSOCLims(self, home, cars):
         minSOC_Start = 100
         maxSOC_Start = 100
         i = 0
@@ -91,6 +89,9 @@ class PredictionClass:
         self.predHomeSOC_a = []
         self.date_predHomeSOC_a.append(self.berlin.localize(datetime.datetime.now()))
         self.predHomeSOC_a.append(home.SOC)
+        self.carsTotalCap=0
+        for car in cars:
+            self.carsTotalCap += car.capacityWs
         if len(self.date_a) > 0:
 
             date_a_ts = [self.toTimestamp(self.date_a[n]) for n in range(0, len(self.date_a))]
@@ -111,10 +112,11 @@ class PredictionClass:
         self.minSOCHome_a = [0] * n_1
         self.minSOCHomeLowProd_a = [0] * n_1
         self.maxSOCHome_a = [0] * n_1
+        for car in cars:
+            car.minSOCVeh_a = [0] * n_1
+            car.maxSOCVehProdChrg_a = [0] * n_1
+            car.maxSOCVehExcessChrg_a = [0] * n_1
 
-        self.minSOCVeh_a = [0] * n_1
-        self.maxSOCVehProdChrg_a = [0] * n_1
-        self.maxSOCVehExcessChrg_a = [0] * n_1
         date_predHomeSOC_a_ts = [self.toTimestamp(self.date_predHomeSOC_a[n]) for n in
                                  range(0, len(self.date_predHomeSOC_a))]
         for i in range(n, -1, -1):
@@ -123,10 +125,10 @@ class PredictionClass:
                 self.minSOCHomeLowProd_a[i] = minSOC_Start
 
                 self.maxSOCHome_a[i] = maxSOC_Start
-
-                self.minSOCVeh_a[i] = self.minSOCVehTar
-                self.maxSOCVehProdChrg_a[i] = self.maxSOCVehTarProdChrg
-                self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehTarExcessChrg
+                for car in cars:
+                    car.minSOCVeh_a[i] = self.minSOCVehTar
+                    car.maxSOCVehProdChrg_a[i] = self.maxSOCVehTarProdChrg
+                    car.maxSOCVehExcessChrg_a[i] = self.maxSOCVehTarExcessChrg
 
             else:
                 __timediff = self.date_a[i + 1] - self.date_a[i]
@@ -166,31 +168,34 @@ class PredictionClass:
                         _qCutOff = 0
                     else:
                         _qCutOff = _qCutOff
-                deltaSOC, __flgPlannedTrip, __flgVehAway = self.getDailyCons(self.date_a[i], self.date_a[i + 1])
-                if not __flgVehAway:
-                    self.minSOCVeh_a[i] = self.minSOCVeh_a[i + 1] - max(0, _qExcess) / self.qVeh * 100
-                    self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt / self.qVeh * 100
-                    self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i + 1] - _qCutOff / self.qVeh * 100
-                else:
-                    self.minSOCVeh_a[i] = self.minSOCVeh_a[i+1]
-                    self.maxSOCVehProdChrg_a[i] = self.maxSOCVehProdChrg_a[i+1]
-                    self.maxSOCVehExcessChrg_a[i] = self.maxSOCVehExcessChrg_a[i+1]
+                
+                for car in cars:
+                    deltaSOC, __flgPlannedTrip, __flgVehAway = self.getDailyCons(self.date_a[i], self.date_a[i + 1], car)
+                    r = car.capacityWs / self.carsTotalCap
+                    if not __flgVehAway:
+                        car.minSOCVeh_a[i] = car.minSOCVeh_a[i + 1] - max(0, _qExcess*r) / self.qVeh * 100
+                        car.maxSOCVehProdChrg_a[i] = car.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt*r / self.qVeh * 100
+                        car.maxSOCVehExcessChrg_a[i] = car.maxSOCVehExcessChrg_a[i + 1] - _qCutOff*r / self.qVeh * 100
+                    else:
+                        car.minSOCVeh_a[i] = car.minSOCVeh_a[i+1]
+                        car.maxSOCVehProdChrg_a[i] = car.maxSOCVehProdChrg_a[i+1]
+                        car.maxSOCVehExcessChrg_a[i] = car.maxSOCVehExcessChrg_a[i+1]
 
 
                 #if self.date_a[i].hour == self.hDailyCons and self.date_a[i + 1].hour > self.hDailyCons:  # first time hour matches configured time (if hDailyCons= 13, then 13:55
 
-                self.minSOCVeh_a[i] += deltaSOC
-                self.maxSOCVehProdChrg_a[i] += deltaSOC
-                self.maxSOCVehExcessChrg_a[i] += deltaSOC
+                    car.minSOCVeh_a[i] += deltaSOC
+                    car.maxSOCVehProdChrg_a[i] += deltaSOC
+                    car.maxSOCVehExcessChrg_a[i] += deltaSOC
 
-                if __flgPlannedTrip:
-                    self.minSOCVeh_a[i] = self.lim(self.minSOCVeh_a[i], 50, max(80, min(100, 15 + deltaSOC)))
-                    self.maxSOCVehProdChrg_a[i] = self.lim(self.maxSOCVehProdChrg_a[i], 15, max(80, min(100, 15 + deltaSOC)))
-                    self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, 100)
-                else:
-                    self.minSOCVeh_a[i] = self.lim(self.minSOCVeh_a[i], 50, max(80, self.minSOCVeh_a[i+1]))
-                    self.maxSOCVehProdChrg_a[i] = self.lim(self.maxSOCVehProdChrg_a[i], 15, max(85, self.maxSOCVehProdChrg_a[i+1]))
-                    self.maxSOCVehExcessChrg_a[i] = self.lim(self.maxSOCVehExcessChrg_a[i], 45, max(90, self.maxSOCVehExcessChrg_a[i+1]))
+                    if __flgPlannedTrip:
+                        car.minSOCVeh_a[i] = self.lim(car.minSOCVeh_a[i], 50, max(80, min(100, 15 + deltaSOC)))
+                        car.maxSOCVehProdChrg_a[i] = self.lim(car.maxSOCVehProdChrg_a[i], 15, max(80, min(100, 15 + deltaSOC)))
+                        car.maxSOCVehExcessChrg_a[i] = self.lim(car.maxSOCVehExcessChrg_a[i], 45, 100)
+                    else:
+                        car.minSOCVeh_a[i] = self.lim(car.minSOCVeh_a[i], 50, max(80, car.minSOCVeh_a[i+1]))
+                        car.maxSOCVehProdChrg_a[i] = self.lim(car.maxSOCVehProdChrg_a[i], 15, max(85, car.maxSOCVehProdChrg_a[i+1]))
+                        car.maxSOCVehExcessChrg_a[i] = self.lim(car.maxSOCVehExcessChrg_a[i], 45, max(90, car.maxSOCVehExcessChrg_a[i+1]))
 
 
             # print(self.date_a[i])
@@ -199,9 +204,10 @@ class PredictionClass:
     def loadDailyCons(self):
         with open(self.dailyConsPath, 'r') as f:
             data = f.read()
-        self.jDailyCons = json.loads(data)
+        if data != "":
+            self.jDailyCons = json.loads(data)
 
-    def getDailyCons(self, arg_date, arg_dateOld):
+    def getDailyCons(self, arg_date, arg_dateOld, car):
         cons = 0
         __foundTripOnDate = False
         __flgPlannedTrip = False
@@ -217,12 +223,12 @@ class PredictionClass:
             if jsonStrtDateLoc.day == arg_date.day:
                 __foundTripOnDate = True
             if arg_date <= jsonStrtDateLoc < arg_dateOld:
-                cons = float(day["km"]) * self.consPer100km / 100
+                cons = float(day["km"])/100 * car.consumption * 1000  # convert km to Wh
                 __flgPlannedTrip = True
             if jsonStrtDateLoc < arg_date < jsonEndDateLoc:
                 __flgVehAway = True
         if (not __foundTripOnDate) and arg_date.hour == self.hDailyCons and arg_dateOld.hour > self.hDailyCons:
-            cons = 0.12 * self.consPer100km
+            cons = 0.12 * car.consumption * 1000 # default daily trip: 12km
         # print("Day: "+str(date)+", Cons: "+str(cons))
         return (cons / self.qVeh * 100, __flgPlannedTrip, __flgVehAway)
 

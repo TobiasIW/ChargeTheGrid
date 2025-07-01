@@ -21,7 +21,7 @@ class homeData:
     def __init__(self, config):
         self.IP = config.homeBattIP
 
-    def update(self, charger, dT):
+    def update(self, chargers, dT):
         try:
             response = requests.get(f"http://" + self.IP + ":8080/api/v1/status")
 
@@ -39,6 +39,11 @@ class homeData:
                 __SOCRecd=response.json()["USOC"]
                 self.SOC = self.SOC - self.Batt_pow*dT/3600/self.qBattCap*100
                 self.SOC = self.SOC + (__SOCRecd - self.SOC) * 0.05
-            self.Cons_home=self.Cons-charger.power
+
+            __chargerPower=0
+            for charger in chargers:
+                 __chargerPower += charger.power
+
+            self.Cons_home=self.Cons-__chargerPower
         except Exception as e:
                 print("Exception: couldn't read wallbox data: ", e)

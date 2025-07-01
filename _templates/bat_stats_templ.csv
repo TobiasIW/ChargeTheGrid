@@ -1,1 +1,1 @@
-SOC,Prod,Cons,Batt_pow,GridFeedIn_pow,OperatingMode,CarStatus,TimeStamp, SwitchActive,Mode, flgAuto, Cons_Home,SOC_Car
+SOC,Prod,ConsHome,Batt_pow,GridFeedIn_pow,OperatingMode,TimeStamp,Mode,flgAuto,ChargerStatus_Golf,ConsChrg_Golf,SOC_Car_Golf,newValueSOCCar_Golf,ChargerStatus_Audi,ConsChrg_Audi,SOC_Car_Audi,newValueSOCCar_Audi

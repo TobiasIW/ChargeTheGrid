@@ -28,7 +28,7 @@ class chargeStrategy:
     def toTimestamp(self, d):
         return d.timestamp()
 
-    def calcStrategy(self, homeData, csvname, charger, myCar, pred, config, dt):
+    def calcStrategy(self, homeData,  chargers, myCars, pred, config, dt):
 
         powDes = 0
         try:
@@ -48,10 +48,10 @@ class chargeStrategy:
 
         homeData.stChargeMode = self.stChargeMode
 
-
-        if charger.power > 0:
-            self.tiLastCharge = datetime.datetime.now()
-
+        for charger in chargers:
+            if charger.power > 0:
+                self.tiLastCharge = datetime.datetime.now()
+        
 
         flgAllow1P = True
         if self.stChargeMode == OFF:
@@ -62,12 +62,34 @@ class chargeStrategy:
             if len(pred.date_a) > 0:
                 timeNow_ts = pred.toTimestamp(datetime.datetime.now())
                 dateDay_a_ts = [pred.toTimestamp(pred.date_a[n]) for n in range(0, len(pred.date_a))]
-                minSOCVeh = interpolate.interp1d(dateDay_a_ts, pred.minSOCVeh_a)(timeNow_ts)
-                maxSOCVehProdChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehProdChrg_a)(timeNow_ts)
 
-                maxSOCVehExcessChrg = interpolate.interp1d(dateDay_a_ts, pred.maxSOCVehExcessChrg_a)(timeNow_ts)
+                maxSOCVehProdChrg_a=[]
+                maxSOCVehExcessChrg_a=[]
+                minSOCVeh_a = []
+                for car in myCars:
+                    minSOCVeh_a.append(interpolate.interp1d(dateDay_a_ts, car.minSOCVeh_a)(timeNow_ts))
+                    maxSOCVehProdChrg_a.append(interpolate.interp1d(dateDay_a_ts, car.maxSOCVehProdChrg_a)(timeNow_ts))
+                    maxSOCVehExcessChrg_a.append (interpolate.interp1d(dateDay_a_ts, car.maxSOCVehExcessChrg_a)(timeNow_ts))
+
                 minSOCHomeExcessChargeMin = interpolate.interp1d(dateDay_a_ts, pred.minSOCHome_a)(timeNow_ts)
                 minSOCHomeExcessChargeMax = interpolate.interp1d(dateDay_a_ts, pred.minSOCHomeLowProd_a)(timeNow_ts)
+                _nPluggedIn = 0
+                minRange = 9999
+                iMinRange = 0
+                for i in range(0, len(chargers), 1):
+                    if chargers[i].flgPluggedIn :
+                        _nPluggedIn += 1
+
+                        if myCars[i].range() < minRange and myCars[i].SOC < maxSOCVehExcessChrg_a[i]:
+                            minRange = myCars[i].range
+                            iMinRange=i
+                    
+                myCar = myCars[iMinRange]
+                charger = chargers[iMinRange]
+                minSOCVeh = minSOCVeh_a[iMinRange]
+                maxSOCVehProdChrg = maxSOCVehProdChrg_a[iMinRange]
+                maxSOCVehExcessChrg = maxSOCVehExcessChrg_a[iMinRange]
+
                 if  (self.stChargeMode == AUTO and myCar.SOC < maxSOCVehProdChrg) or self.stChargeMode == AUTO_HIGH:
                     minSOCHomeExcessCharge = minSOCHomeExcessChargeMin
                 else:
@@ -160,13 +182,15 @@ class chargeStrategy:
                 # asyncio.run(plug.update())
                 
 
-                __powerMin= max (0, int(homeData.Prod) - int(homeData.Cons_home) - min(pred.maxBattPowChrg,  (homeData.SOC - homeData.ratSOCMinOper) * 1000))
-                __powerMax= int(homeData.Prod) - int(homeData.Cons_home) - min(pred.maxBattPowDischa, (homeData.ratSOCMaxOper - homeData.SOC ) * 1000)
+                __powerMin= max (0, int(homeData.Prod) - int(homeData.Cons_home) - max(0, min(pred.maxBattPowChrg + (homeData.ratSOCMaxOper - homeData.SOC) * 1000,pred.maxBattPowChrg)))
+                __powerMax= int(homeData.Prod) - int(homeData.Cons_home) - max(min(pred.maxBattPowDischa - (homeData.SOC - homeData.ratSOCMinOper ) * 1000, 0), pred.maxBattPowDischa)
                     
                 #filter pwrAvl with a filter time of 5 minutes
                 self.pwrAvlFltd = self.pwrAvlFltd + (pwrAvl - self.pwrAvlFltd) * dt/ self.filterTime
                 self.pwrAvlFltd = max(self.pwrAvlFltd, __powerMin)
                 self.pwrAvlFltd = min(self.pwrAvlFltd, __powerMax)
+                print ("Prod: " + str(homeData.Prod))
+                print ("Cons: " + str(homeData.Cons_home))
                 print("pwrAvlFltd: " + str(self.pwrAvlFltd))
                 print("pwrAvl: " + str(pwrAvl))
                 print("pwrAvlMin: " + str(__powerMin))

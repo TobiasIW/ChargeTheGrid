@@ -27,15 +27,17 @@ sysCtrl.checkRunning(config)
 #charger = goecharger.chargerClass(config)
 homeData = home.homeData(config)
 strategy = chargeStrategy.chargeStrategy(homeData)
-vis = visualization.visualizationClass(config)
 # create a myCar array the same size as the combo array
 myCar = []
 charger=[]
 for i in range(len(config.combo)):
     # create a car object for each combo
-    myCar.append(car.carClass(vis, config.combo[i]))
+    myCar.append(car.carClass( config.combo[i]))
     charger.append(goecharger.chargerClass(config.combo[i]))
-#myCar = car.carClass(vis, config.combo[0])
+
+vis = visualization.visualizationClass(config, len(config.combo))
+for car in myCar:
+    car.initSOC(vis)
 pred = powerPrediction.PredictionClass(config)
 
 cycleCounter = 0  # neuer Wert erst nach 2h
@@ -83,11 +85,12 @@ while True:#
             # update the charger values for each charger in the combo array
             charger[i].updateVals()
             myCar[i].modelUpdateSOC(dT, charger[i])
-        homeData.update(charger[1], dT)
-        pred.updateSOCLims(homeData)
+        homeData.update(charger, dT)
+        pred.updateSOCLims(homeData,myCar)
         
-        homeData.SwitchActive = strategy.calcStrategy(homeData, vis.csvname, charger[1], myCar[1], pred, config, dT)
-        vis.writeCSV(homeData, charger[1], myCar[1], config)
+        __power = strategy.calcStrategy(homeData, charger, myCar, pred, config, dT)
+
+        vis.writeCSV(homeData, charger, myCar, config)
         print("cycle finished: {0}".format(str(cycleCounter)))
         logging.error("cycle finished: " + str(cycleCounter))
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### end 20s task###")
@@ -95,7 +98,7 @@ while True:#
     flgExe, dT = sysCtrl.executeTask(60, 20)
     if flgExe:
         print(datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S") + ": ### start 60s task###")
-        vis.plotData(pred, config)
+        vis.plotData(pred, config, myCar, charger)
         #sysCtrl.checkRunning(config)
         #except Exception as e:
         #    print(e)

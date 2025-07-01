@@ -13,8 +13,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
-
-
+class ComboClass:
+    def __init__(self):
+        self.ConsChrg_a = []  # Initialize as an empty list
+        self.Car_SOC_a = []   # Initialize as an empty list
+        self.newValueSOCCar_a = []  # Initialize as an empty list
+        self.Car_Consumption = []
+        self.SystemStatus_a = []  # Initialize as an empty list
 class visualizationClass:
     exec_delta = 1 / 60  # time between scheduled execution in h
     x = []
@@ -32,7 +37,6 @@ class visualizationClass:
     Production = []
     FeedIn = []
     Grid_Consumption = []
-    Car_Consumption = []
     Charge = []
     Discharge = []
     SwitchActive_a = []
@@ -55,50 +59,73 @@ class visualizationClass:
                 
         return 0  # Return 0 if no valid value is found
 
-    def writeCSV(self, homeData, charger, myCar, config):
+    def writeCSV(self, homeData, chargers, myCars, config):
         with open(self.csvname, 'a', newline='') as csvfile:
-            fieldnames = ['SOC', 'Prod', 'Cons', 'Batt_pow', 'GridFeedIn_pow', 'OperatingMode', 'CarStatus',
-                          'TimeStamp', 'newValueSOCCar', 'Mode', 'flgAuto', 'Cons_Home', 'SOC_Car']
+            fieldnames = ['SOC', 'Prod', 'ConsHome', 'Batt_pow', 'GridFeedIn_pow', 'OperatingMode',
+                          'TimeStamp', 'Mode', 'flgAuto']
+            for c in range(0, len(myCars), 1):
+                fieldnames.append('ChargerStatus_' + myCars[c].name)
+                fieldnames.append('ConsChrg_' + myCars[c].name)  
+                fieldnames.append('SOC_Car_' + myCars[c].name)
+                fieldnames.append('newValueSOCCar_' + myCars[c].name)
+                
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writerow(
-                {'SOC': homeData.SOC, 'Prod': homeData.Prod, 'Cons': homeData.Cons, 'Batt_pow': homeData.Batt_pow,
-                 'GridFeedIn_pow': homeData.GridFeedIn_pow, 'OperatingMode': homeData.OperatingMode,
-                 'flgAuto': homeData.flgAuto, 'CarStatus': charger.state, 'TimeStamp': homeData.TimeStamp,
-                 'newValueSOCCar': myCar.newValue, 'Mode': homeData.stChargeMode, 'Cons_Home': homeData.Cons_home,
-                 'SOC_Car': myCar.SOC})
-
+            row = {
+                        'SOC': homeData.SOC,
+                        'Prod': homeData.Prod,
+                        'ConsHome': homeData.Cons_home,
+                        'Batt_pow': homeData.Batt_pow,
+                        'GridFeedIn_pow': homeData.GridFeedIn_pow,
+                        'OperatingMode': homeData.OperatingMode,
+                        'TimeStamp': homeData.TimeStamp,
+                        'Mode': homeData.stChargeMode,
+                        'flgAuto': homeData.flgAuto
+                    }
+                    
+                    # Add car-specific data to the dictionary
+            for c in range(len(myCars)):
+                row[f'ChargerStatus_{myCars[c].name}'] = chargers[c].state
+                row[f'ConsChrg_{myCars[c].name}'] = chargers[c].power
+                row[f'SOC_Car_{myCars[c].name}'] = myCars[c].SOC
+                row[f'newValueSOCCar_{myCars[c].name}'] = myCars[c].newValue
+            
+            # Write the row to the CSV
+            writer.writerow(row)
             i = len(self.x) - 1  #
 
             self.SOC_a.append(homeData.SOC)
             self.Prod_a.append(homeData.Prod)
-            self.Cons_a.append(homeData.Cons)
+            self.ConsHome_a.append(homeData.Cons_home)  # int(row[10]))
             self.Batt_pow_a.append(homeData.Batt_pow)
             self.GridFeedIn_pow_a.append(homeData.GridFeedIn_pow)
             self.OperatingMode_a.append(homeData.OperatingMode)
-            self.SystemStatus_a.append(charger.state)
+            
 
             self.Time_a.append(self.berlin.localize(pd.to_datetime(homeData.TimeStamp)))
-
-
-            self.newValueSOCCar_a.append(myCar.newValue)
             self.stChargeMode_a.append(homeData.stChargeMode)
             self.flgAuto_a.append(homeData.flgAuto)
-            self.ConsHome_a.append(homeData.Cons_home)  # int(row[10]))
-            self.Car_SOC_a.append(myCar.SOC)
+            for c in range(0,len(myCars),1):  
+                self.combo[c].newValueSOCCar_a.append(myCars[c].newValue)
+                self.combo[c].Car_SOC_a.append(myCars[c].SOC)
+                self.combo[c].ConsChrg_a.append(chargers[c].power)  # int(row[10]))
+                self.combo[c].SystemStatus_a.append(chargers[c].state)
+                                            
 
             self.x.append(i)
 
         time_delta_a = [self.Time_a[n].timestamp() / 3600000 for n in range(0, len(self.Time_a))]
-        __cons_car = [self.Cons_a[n] - self.ConsHome_a[n] for n in range(0, len(self.Time_a))]
         self.FeedIn_pow = [max(0, self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
         self.Grid_Consumption_pow = [max(0, -self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
 
-        self.Consumption = integrate.cumtrapz(self.Cons_a, time_delta_a, initial = 0)
+        self.Consumption = integrate.cumtrapz(self.ConsHome_a, time_delta_a, initial = 0)
         self.Production = integrate.cumtrapz(self.Prod_a, time_delta_a, initial = 0)
         self.FeedIn = integrate.cumtrapz(self.FeedIn_pow, time_delta_a, initial = 0)
         self.Grid_Consumption = integrate.cumtrapz(self.Grid_Consumption_pow, time_delta_a, initial = 0)
-        self.Car_Consumption = integrate.cumtrapz(__cons_car, time_delta_a, initial = 0)
-        df = pd.DataFrame({'index': self.Time_a, 'consumption': self.Cons_a, 'production': self.Prod_a})
+        for c in range(len(myCars)): 
+            #__cons_car = [self.Cons_a[n] - self.ConsHome_a[n] - self.combo[c].ConsChrg_a[n] for n in range(0, len(self.Time_a))]
+            self.combo[c].Car_Consumption = integrate.cumtrapz(self.combo[c].ConsChrg_a, time_delta_a, initial = 0)
+        #self.Car_Consumption = integrate.cumtrapz(__cons_car, time_delta_a, initial = 0)
+        df = pd.DataFrame({'index': self.Time_a, 'consumption': self.ConsHome_a, 'production': self.Prod_a})
         pd.options.plotting.backend= "plotly"
         __current_date = datetime.datetime.now().date()
         ' Check if the first date in Time_a is from today'
@@ -107,7 +134,7 @@ class visualizationClass:
         if not __is_from_today:
             self.__init__(config)
         a=1
-    def clear(self):
+    def clear(self, nCombos):
         self.x = []
         self.SOC_a = []
         self.Prod_a = []
@@ -129,11 +156,20 @@ class visualizationClass:
         self.flgAuto_a = []
         self.Car_SOC_a = []
         self.FeedIn_pow = []
+        self.combo = [ComboClass() for _ in range(0, nCombos, 1)]  # Create a list of ComboClass objects
+        for combo in self.combo:
+            combo.ConsChrg_a = []   
+            combo.Car_SOC_a = []
+            combo.newValueSOCCar_a = []
+            combo.Car_Consumption = []
+            combo.SystemStatus_a = []  # Initialize as an empty list
 
-    def __init__(self, config):
-        self.clear()
+
+    def __init__(self, config, nCombos):
+        self.clear(nCombos)
         self.csvname = config.dataFolder + "bat_stats.csv"
         self.berlin = pytz.timezone("Europe/Berlin")
+       
         try:
             data = csv.reader(open(self.csvname, 'r'))
             i = 0
@@ -144,20 +180,19 @@ class visualizationClass:
 
                         self.SOC_a.append(float(row[0]))
                         self.Prod_a.append(int(row[1]))
-                        self.Cons_a.append(int(row[2]))
+                        self.ConsHome_a.append(int(row[2]))
                         self.Batt_pow_a.append(int(row[3]))
                         self.GridFeedIn_pow_a.append(int(row[4]))
-                        self.OperatingMode_a.append(int(row[5]))
-                        self.SystemStatus_a.append(row[6])
-                        self.Time_a.append(self.berlin.localize(pd.to_datetime(row[7])))
+                        self.OperatingMode_a.append(int(row[5]))                        
+                        self.Time_a.append(self.berlin.localize(pd.to_datetime(row[6])))
+                        self.stChargeMode_a.append(int(row[7]))
+                        self.flgAuto_a.append(int(row[8]))
+                        for c in range(0, nCombos,1):
+                            self.combo[c].SystemStatus_a.append(row[9+4*c])
+                            self.combo[c].ConsChrg_a.append(int(row[10+4*c]))  # int(row[10]))
+                            self.combo[c].Car_SOC_a.append(float(row[11+4*c]))                        
+                            self.combo[c].newValueSOCCar_a.append(int(row[12+4*c]))
 
-
-
-                        self.newValueSOCCar_a.append(int(row[8]))
-                        self.stChargeMode_a.append(int(row[9]))
-                        self.flgAuto_a.append(int(row[10]))
-                        self.ConsHome_a.append(int(row[11]))  # int(row[10]))
-                        self.Car_SOC_a.append(float(row[12]))
 
                         self.x.append(i)
                     except:
@@ -167,17 +202,18 @@ class visualizationClass:
             self.FeedIn_pow = [max(0, self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
             self.Grid_Consumption_pow = [max(0, -self.GridFeedIn_pow_a[n]) for n in range(0, len(self.Time_a))]
 
-            self.Consumption = integrate.cumtrapz(self.Cons_a, time_delta_a, initial=0)
+            self.Consumption = integrate.cumtrapz(self.ConsHome_a, time_delta_a, initial=0)
             self.Production = integrate.cumtrapz(self.Prod_a, time_delta_a, initial=0)
             self.FeedIn = integrate.cumtrapz(self.FeedIn_pow, time_delta_a, initial=0)
             self.Grid_Consumption = integrate.cumtrapz(self.Grid_Consumption_pow, time_delta_a, initial=0)
-            __cons_car = [self.Cons_a[n] - self.ConsHome_a[n] for n in range(0, len(self.Time_a))]
-
-            self.Car_Consumption = integrate.cumtrapz(__cons_car, time_delta_a, initial=0)
+            for c in range(0, nCombos, 1): 
+                #__cons_car = [self.Cons_a[n] - self.ConsHome_a[n] - self.combo[c].ConsChrg_a[n] for n in range(0, len(self.Time_a))]
+                self.combo[c].Car_Consumption = integrate.cumtrapz(self.combo[c].ConsChrg_a, time_delta_a, initial=0)
+            #self.Car_Consumption = integrate.cumtrapz(__cons_car, time_delta_a, initial=0)
 
         except:
             print("Exception: could not load csv")
-    def plotData(self, pred, config):
+    def plotData(self, pred, config, myCars, chargers):
         i = len(self.x)
         ti = [pd.to_datetime(d) for d in self.Time_a]
         # print(ti)
@@ -230,8 +266,12 @@ class visualizationClass:
         plt6.set_xlim(ti[0], __endofday)
 
         plt7.set_xlim(ti[0], __endofday)
-
-        plt1.plot(ti, self.Cons_a, label="Verbrauch", linewidth="0.5")
+        # add self.ConsHome_a all charger consumptions in self.combo[c]
+        self.consTotal = [
+            self.ConsHome_a[n] + sum(self.combo[c].Car_Consumption[n] for c in range(len(self.combo)))
+            for n in range(len(self.Time_a))
+        ]
+        plt1.plot(ti, self.consTotal, label="Verbrauch", linewidth="0.5")
         plt1.plot(ti, self.Prod_a, label="Produktion", linewidth="0.5")
         plt1.plot(ti, self.Batt_pow_a, label="Laden(-)/Entladen(+)", linewidth="0.5")
         plt1.plot(ti, self.GridFeedIn_pow_a, label="Einspeisung(+)/Bezug(-)", linewidth="0.5")
@@ -246,40 +286,40 @@ class visualizationClass:
         plt1_2.fill_between(pred.date_a, pred.powProdLow_a, pred.powProd_a, color='C0', alpha=0.4)
 
         n = len(pred.date_a)
-        plt2.plot(ti, self.Car_SOC_a, label="SOC_Auto", linewidth="0.5")
+        plt2.plot(ti, self.combo[0].Car_SOC_a, label="SOC_Auto", linewidth="0.5")
         #plt2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio", linewidth="0.5")
         #plt2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss", linewidth="0.5")
         #plt2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln", linewidth="0.5")
-        plt2.fill_between(pred.date_a, 0, np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a), color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
-        plt2.fill_between(pred.date_a, pred.minSOCVeh_a, np.maximum(pred.maxSOCVehProdChrg_a,  pred.minSOCVeh_a), linewidth=0.0, color='orange', alpha=0.4, label='Fz SOC: vollst. Ertrag laden')
-        plt2.fill_between(pred.date_a, pred.maxSOCVehProdChrg_a, pred.maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
-        plt2.fill_between(pred.date_a, pred.maxSOCVehExcessChrg_a, 110, color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
+        plt2.fill_between(pred.date_a, 0, np.minimum(myCars[0].minSOCVeh_a, myCars[0].maxSOCVehProdChrg_a), color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
+        plt2.fill_between(pred.date_a, myCars[0].minSOCVeh_a, np.maximum(myCars[0].maxSOCVehProdChrg_a,  myCars[0].minSOCVeh_a), linewidth=0.0, color='orange', alpha=0.4, label='Fz SOC: vollst. Ertrag laden')
+        plt2.fill_between(pred.date_a, myCars[0].maxSOCVehProdChrg_a, myCars[0].maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
+        plt2.fill_between(pred.date_a, myCars[0].maxSOCVehExcessChrg_a, 110, color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
 
-        plt2.annotate("{:10.0f}".format(self.Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.Car_SOC_a[i - 2]), horizontalalignment="right")
+        plt2.annotate("{:10.0f}".format(self.combo[0].Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.combo[0].Car_SOC_a[i - 2]), horizontalalignment="right")
 
 
         #plt2_2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio")
         try:
-            plt2_2.fill_between(pred.date_a, 0, np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a),  color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
+            plt2_2.fill_between(pred.date_a, 0, np.minimum(myCars[0].minSOCVeh_a, myCars[0].maxSOCVehProdChrg_a),  color='tomato', alpha=0.4, label='Fz SOC: max. Laden')
         except ValueError as e:
             print("Exception: ValueError: ", e)
             with np.printoptions(threshold=np.inf):
-                print("pred.minSOCVeh_a: ", pred.minSOCVeh_a)
-                print("pred.maxSOCVehProdChrg_a: ", pred.maxSOCVehProdChrg_a)
+                print("pred.minSOCVeh_a: ", myCars[0].minSOCVeh_a)
+                print("pred.maxSOCVehProdChrg_a: ", myCars[0].maxSOCVehProdChrg_a)
                 print("np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a): ",
-                      np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a))
+                      np.minimum(myCars[0].minSOCVeh_a, myCars[0].maxSOCVehProdChrg_a))
         except Exception as e:
             print("Exception: ",e)
             with np.printoptions(threshold=np.inf):
-                print("pred.minSOCVeh_a: ", pred.minSOCVeh_a)
-                print("pred.maxSOCVehProdChrg_a: ", pred.maxSOCVehProdChrg_a)
-                print("np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a): ", np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a))
+                print("pred.minSOCVeh_a: ", myCars[0].minSOCVeh_a)
+                print("pred.maxSOCVehProdChrg_a: ", myCars[0].maxSOCVehProdChrg_a)
+                print("np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a): ", np.minimum(myCars[0].minSOCVeh_a, myCars[0].maxSOCVehProdChrg_a))
 
-        plt2_2.fill_between(pred.date_a, pred.maxSOCVehProdChrg_a, pred.maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
-        plt2_2.fill_between(pred.date_a, pred.maxSOCVehExcessChrg_a, 110,  color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
+        plt2_2.fill_between(pred.date_a, myCars[0].maxSOCVehProdChrg_a, myCars[0].maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
+        plt2_2.fill_between(pred.date_a, myCars[0].maxSOCVehExcessChrg_a, 110,  color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
         #plt2_2.plot(pred.date_a, pred.maxSOCVehProdChrg_a, 'g--', label="Min SOC Veh Überschuss")
         #plt2_2.plot(pred.date_a, pred.maxSOCVehExcessChrg_a, 'g', label="Min SOC Veh Abriegeln")
-        plt2_2.fill_between(pred.date_a, pred.maxSOCVehProdChrg_a, np.minimum(pred.maxSOCVehProdChrg_a, pred.minSOCVeh_a), linewidth=0.0, color='orange', alpha=0.4, label='Fz SOC: vollst. Ertrag laden')
+        plt2_2.fill_between(pred.date_a, myCars[0].maxSOCVehProdChrg_a, np.minimum(myCars[0].maxSOCVehProdChrg_a, myCars[0].minSOCVeh_a), linewidth=0.0, color='orange', alpha=0.4, label='Fz SOC: vollst. Ertrag laden')
 
 
         plt3.plot(ti, self.SOC_a, label="SOC", linewidth="0.5")
@@ -310,15 +350,15 @@ class visualizationClass:
         plt4.annotate("{:10.1f}".format(self.Grid_Consumption[i - 2]) + " kWh",
                       xy=(ti[i - 2], self.Grid_Consumption[i - 2]), horizontalalignment="right")
 
-        plt5.plot(ti, self.newValueSOCCar_a, label="Neuer API-Wert SOC Auto (toggle 0/1)")
+        #plt5.plot(ti, self.newValueSOCCar_a, label="Neuer API-Wert SOC Auto (toggle 0/1)")
 
         plt6.plot(ti, self.stChargeMode_a, label="Modus")
         plt6.plot(ti, self.flgAuto_a, label="Automatik")
         plt6.annotate("{:10.0f}".format(self.stChargeMode_a[i - 2]) + "", xy=(ti[i - 2], self.stChargeMode_a[i - 2]),
                       horizontalalignment="right")
 
-        plt7.plot(ti, [int(i) for i in self.SystemStatus_a],
-                  label="Fahrzeugstatus (Unknown/Error=0, Idle=1, Charging=2, WaitCar=3, Complete=4, Error=5)")
+       # plt7.plot(ti, [int(i) for i in self.SystemStatus_a],
+                  #label="Fahrzeugstatus (Unknown/Error=0, Idle=1, Charging=2, WaitCar=3, Complete=4, Error=5)")
         # plt7.annotate("{:10.0f}".format(SystemStatus_a[i-2]) + "", xy=(ti[i-2], SystemStatus_a,[i-2]), horizontalalignment="right")
 
         plt1.legend(loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=4)
@@ -351,10 +391,10 @@ class visualizationClass:
         plt.savefig(config.dataFolder + "graph.svg", format="svg", bbox_inches='tight')
 
         # Create subplots with two rows and one column
-        fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.015, row_heights=[0.3, 0.2, 0.2, 0.3])
+        fig = make_subplots(rows=3+len(myCars), cols=1, shared_xaxes=True, vertical_spacing=0.015, row_heights=[0.3]+[0.2 for _ in range(len(myCars))]+[0.2, 0.3])
 
         # Add consumption trace to the first subplot
-        fig.add_trace(go.Scatter(x=ti, y=self.Cons_a, mode='lines',line=dict(color='blue', width=1), name='total consumption'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.consTotal, mode='lines',line=dict(color='blue', width=1), name='total consumption'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.ConsHome_a, mode='lines', line=dict(color='purple', width=1), name='home consumption'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.Prod_a, mode='lines', line=dict(color='orange', width=1), name='Production'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.GridFeedIn_pow_a, line=dict(color='red', width=1), mode='lines', name='Einspeisung(+)/Bezug(-)'), row=1, col=1)
@@ -365,31 +405,32 @@ class visualizationClass:
         __colGreen = 'rgba(152, 255, 152, 0.4)'
         __colOrange = 'rgba(255, 165, 0, 0.4)'
         __colYellow = 'rgba(255, 215, 0, 0.4)'
+        for c in range(0,len(myCars),1):
+            fig.add_trace(go.Scatter(x=ti, y=self.combo[c].Car_SOC_a, mode='lines', showlegend=True, name='Car SOC'), row=2+c, col=1)
+            #invisible line for filling area between excess charge limit and 100%
+            fig.add_trace(go.Scatter(x=pred.date_a, y=[100]*len(pred.date_a), mode='lines', showlegend=False, line=dict(color='green'), name='y=100'), row=2+c, col=1)
+            # lines for car SOC limits
+            fig.add_trace(go.Scatter(x=pred.date_a, y=myCars[c].maxSOCVehExcessChrg_a, mode='lines', showlegend=True, fill='tonexty',fillcolor=__colBlue, line=dict(color='green', width=1),  name='Fz SOC: smart Laden'), row=2+c, col=1)
+            fig.add_trace(go.Scatter(x=pred.date_a, y=myCars[c].maxSOCVehProdChrg_a, mode='lines', showlegend=True, fill='tonexty', fillcolor=__colGreen,line=dict(color='orange', width=1), name='Fz SOC: smart Laden'), row=2+c, col=1)
+            fig.add_trace(go.Scatter(x=pred.date_a, y=np.minimum(myCars[c].minSOCVeh_a, myCars[c].maxSOCVehProdChrg_a), mode='lines', fill='tonexty', fillcolor=__colOrange,line=dict(color='red', width=1), showlegend=True, name='Fz SOC: max. Laden'), row=2+c, col=1)
+            fig.add_trace(go.Scatter(x=pred.date_a, y=[0]*len(pred.date_a), mode='lines', fill='tonexty', fillcolor=__colTomato,line=dict(color='red', width=1), showlegend=False, name='y=0'), row=2+c, col=1)
 
-        fig.add_trace(go.Scatter(x=ti, y=self.Car_SOC_a, mode='lines', showlegend=True, name='Car SOC'), row=2, col=1)
-        #invisible line for filling area between excess charge limit and 100%
-        fig.add_trace(go.Scatter(x=pred.date_a, y=[100]*len(pred.date_a), mode='lines', showlegend=False, line=dict(color='green'), name='y=100'), row=2, col=1)
-        # lines for car SOC limits
-        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.maxSOCVehExcessChrg_a, mode='lines', showlegend=True, fill='tonexty',fillcolor=__colBlue, line=dict(color='green', width=1),  name='Fz SOC: smart Laden'), row=2, col=1)
-        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.maxSOCVehProdChrg_a, mode='lines', showlegend=True, fill='tonexty', fillcolor=__colGreen,line=dict(color='orange', width=1), name='Fz SOC: smart Laden'), row=2, col=1)
-        fig.add_trace(go.Scatter(x=pred.date_a, y=np.minimum(pred.minSOCVeh_a, pred.maxSOCVehProdChrg_a), mode='lines', fill='tonexty', fillcolor=__colOrange,line=dict(color='red', width=1), showlegend=True, name='Fz SOC: max. Laden'), row=2, col=1)
-        fig.add_trace(go.Scatter(x=pred.date_a, y=[0]*len(pred.date_a), mode='lines', fill='tonexty', fillcolor=__colTomato,line=dict(color='red', width=1), showlegend=False, name='y=0'), row=2, col=1)
 
 
-
-        fig.add_trace(go.Scatter(x=ti, y=self.SOC_a, mode='lines', name='Home SOC'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=pred.date_a, y=[100]*len(pred.date_a), mode='lines', showlegend=False, line = dict(color='green', width=1),name='y=100'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.minSOCHomeLowProd_a, mode='lines', fill='tonexty', fillcolor=__colGreen, line = dict(color='yellow', width=1), name='Max. Home SOC'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.minSOCHome_a, mode='lines', fill='tonexty', fillcolor=__colYellow, line=dict(color='red', width=1), name='Min. Home SOC'), row=3, col=1)
-        fig.add_trace(go.Scatter(x=pred.date_a, y=[0]*len(pred.date_a), mode='lines', fill='tonexty',fillcolor=__colTomato, showlegend=False, name='y=0'), row=3, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.SOC_a, mode='lines', name='Home SOC'), row=3+c, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=[100]*len(pred.date_a), mode='lines', showlegend=False, line = dict(color='green', width=1),name='y=100'), row=3+c, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.minSOCHomeLowProd_a, mode='lines', fill='tonexty', fillcolor=__colGreen, line = dict(color='yellow', width=1), name='Max. Home SOC'), row=3+c, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.minSOCHome_a, mode='lines', fill='tonexty', fillcolor=__colYellow, line=dict(color='red', width=1), name='Min. Home SOC'), row=3+c, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=[0]*len(pred.date_a), mode='lines', fill='tonexty',fillcolor=__colTomato, showlegend=False, name='y=0'), row=3+c, col=1)
 
 
         # Add production trace to the second subplot
-        fig.add_trace(go.Scatter(x=ti, y=self.Consumption, mode='lines', name='Total Consumption'), row=4, col=1)
-        fig.add_trace(go.Scatter(x=ti, y=self.Production, mode='lines', name='Total Production'), row=4, col=1)
-        fig.add_trace(go.Scatter(x=ti, y=self.Car_Consumption, mode='lines', name='Charge energy'), row=4, col=1)
-        fig.add_trace(go.Scatter(x=ti, y=self.Grid_Consumption, mode='lines', name='Bezug'), row=4, col=1)
-        fig.add_trace(go.Scatter(x=ti, y=self.FeedIn, mode='lines', name='Einspeisung'), row=4, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Consumption, mode='lines', name='Total Consumption'), row=4+c, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Production, mode='lines', name='Total Production'), row=4+c, col=1)
+        for n in range(0, len(myCars), 1):
+            fig.add_trace(go.Scatter(x=ti, y=self.combo[n].Car_Consumption, mode='lines', name='Charge energy'+ myCars[n].name), row=4+c, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.Grid_Consumption, mode='lines', name='Bezug'), row=4+c, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.FeedIn, mode='lines', name='Einspeisung'), row=4+c, col=1)
 
         # Update the layout
         fig.update_layout(

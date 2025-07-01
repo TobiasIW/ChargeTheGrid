@@ -10,3 +10,4 @@ _templates-20250413T114723Z-001.zip
 requirements.txt~
 chargePid.pid
 .gitignore
+config/carNames.txt

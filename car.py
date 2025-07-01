@@ -6,16 +6,25 @@ from audiconnect.audi_connect_account import AudiConnectAccount
 import datetime
 class carClass:
     SOC = 0.0
+    consumption = 15 # kWh/100km
     newValue = 0
     _oldState = 2
     # initialize lastChange to minimum value
     # This will be updated when the SOC is fetched
     lastChange = datetime.datetime.min
-    def __init__(self, vis, carConfig):
-        self.SOC = vis.readVal("SOC_Car")
-        self._oldState = vis.readVal("CarStatus")
+    def __init__(self, carConfig):
         self.capacityWs =carConfig["carCapacity"]* 1000 * 3600  # Convert kWh to Ws
-        
+        self.minSOCVeh_a = []
+        self.maxSOCVehProdChrg_a = []
+        self.maxSOCVehExcessChrg_a = []
+        self.name = carConfig["carName"]
+    def initSOC(self, vis):
+        """Initialize the SOC from the visualization."""
+        self.SOC = vis.readVal("SOC_Car_"+self.name)
+        self._oldState = vis.readVal("ChargerStatus_"+self.name)
+
+
+
     def modelUpdateSOC(self, dT_s, charger):
         _state = int(charger.state)
         if (_state == 2) or (_state == 4):
@@ -37,7 +46,9 @@ class carClass:
         print("Power: " + str(_power))
         self.SOC = float(self.SOC) + 100 * ((_power * dT_s) / self.capacityWs)
         self._oldState = _state
-
+    def range(self):
+        """Calculate the range based on the current SOC and consumption."""
+        return (self.SOC / 100) *self.capacityWs/1000/3600 *(100 / self.consumption)
     def getInfo(self, carConfig):
         if carConfig["carProtocol"] == "VW":
             self._handleVWProtocol(carConfig)
@@ -51,6 +62,7 @@ class carClass:
 
     def _handleVWProtocol(self, carConfig):
         weConnect = weconnect.WeConnect(username=carConfig["carUser"], password=carConfig["carPassword"], updateAfterLogin=False, loginOnInit=False)
+        print("Fetch the State of Charge (SOC) for the VW.")
         print('#  Login')
         weConnect.login()
         print('#  update')
@@ -85,7 +97,7 @@ class carClass:
 
 
     async def Audi_get_vehicle_soc(self, carConfig):
-        """Fetch the State of Charge (SOC) for all vehicles associated with the Audi account."""
+        print("Fetch the State of Charge (SOC) for the Audi.")
         # Hardcoded credentials (replace with your own)
         username = carConfig["carUser"]
         password = carConfig["carPassword"]
