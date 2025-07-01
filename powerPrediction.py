@@ -116,7 +116,9 @@ class PredictionClass:
             car.minSOCVeh_a = [0] * n_1
             car.maxSOCVehProdChrg_a = [0] * n_1
             car.maxSOCVehExcessChrg_a = [0] * n_1
-
+        print("after init")
+        print(f"Length of car.minSOCVeh_a: {len(car.minSOCVeh_a)}")
+        print(f"Length of pred.powProd_a: {len(self.powProd_a)}")
         date_predHomeSOC_a_ts = [self.toTimestamp(self.date_predHomeSOC_a[n]) for n in
                                  range(0, len(self.date_predHomeSOC_a))]
         for i in range(n, -1, -1):
@@ -200,7 +202,9 @@ class PredictionClass:
 
             # print(self.date_a[i])
             # print("min: " + str(self.minSOC_a[i]) + " / max:" + str(self.maxSOC_a[i]))
-
+        print("after update")
+        print(f"Length of car.minSOCVeh_a: {len(car.minSOCVeh_a)}")
+        print(f"Length of pred.powProd_a: {len(self.powProd_a)}")
     def loadDailyCons(self):
         with open(self.dailyConsPath, 'r') as f:
             data = f.read()
@@ -232,8 +236,7 @@ class PredictionClass:
         # print("Day: "+str(date)+", Cons: "+str(cons))
         return (cons / self.qVeh * 100, __flgPlannedTrip, __flgVehAway)
 
-    def isPluggedIn(self, date):
-        a=1
+
 
     def lim(self, val, lowLim, upLim):
         return min(upLim, max(lowLim, val))

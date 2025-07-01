@@ -284,7 +284,10 @@ class visualizationClass:
         #plt1_2.plot(pred.date_a, pred.powProdLow_a, 'tab:brown', label="präd. Produktion Min.", linewidth="0.5")
         plt1_2.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
         plt1_2.fill_between(pred.date_a, pred.powProdLow_a, pred.powProd_a, color='C0', alpha=0.4)
-
+        print("before plot")
+        print(f"Length of car.minSOCVeh_a: {len(myCars[0].minSOCVeh_a)}")
+        print(f"Length of pred.powProd_a: {len(pred.powProd_a)}")
+        print(f"Length of pred.date_a: {len(pred.date_a)}")
         n = len(pred.date_a)
         plt2.plot(ti, self.combo[0].Car_SOC_a, label="SOC_Auto", linewidth="0.5")
         #plt2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio", linewidth="0.5")

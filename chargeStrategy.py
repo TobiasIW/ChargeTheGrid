@@ -81,7 +81,7 @@ class chargeStrategy:
                         _nPluggedIn += 1
 
                         if myCars[i].range() < minRange and myCars[i].SOC < maxSOCVehExcessChrg_a[i]:
-                            minRange = myCars[i].range
+                            minRange = myCars[i].range()
                             iMinRange=i
                     
                 myCar = myCars[iMinRange]
