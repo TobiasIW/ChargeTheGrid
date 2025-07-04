@@ -25,6 +25,7 @@ class chargeStrategy:
         self.stChargeMode=0
         self.filterTime = 5*60 # 5 minutes
         self.pwrAvlFltd = 0
+        self.iMinSOC = 0
     def toTimestamp(self, d):
         return d.timestamp()
 
@@ -56,8 +57,12 @@ class chargeStrategy:
         flgAllow1P = True
         if self.stChargeMode == OFF:
             pwrAvl = 0
+            for charger in chargers:
+                charger.setPower(pwrAvl, flgAllow1P, 0, 11000)
         if self.stChargeMode == ON:
             pwrAvl = 11000
+            for charger in chargers:
+                charger.setPower(pwrAvl, flgAllow1P, 0, 11000)
         if self.stChargeMode >= AUTO_CUTOFF:
             if len(pred.date_a) > 0:
                 timeNow_ts = pred.toTimestamp(datetime.datetime.now())
@@ -74,22 +79,31 @@ class chargeStrategy:
                 minSOCHomeExcessChargeMin = interpolate.interp1d(dateDay_a_ts, pred.minSOCHome_a)(timeNow_ts)
                 minSOCHomeExcessChargeMax = interpolate.interp1d(dateDay_a_ts, pred.minSOCHomeLowProd_a)(timeNow_ts)
                 _nPluggedIn = 0
-                minRange = 9999
-                iMinRange = 0
+                hysteresisSOC = 5
+                minSOC = 100+hysteresisSOC
+                
+                iMinSOCOld = self.iMinSOC
+                self.iMinSOC = 0
                 for i in range(0, len(chargers), 1):
                     if chargers[i].flgPluggedIn :
                         _nPluggedIn += 1
 
-                        if myCars[i].range() < minRange and myCars[i].SOC < maxSOCVehExcessChrg_a[i]:
-                            minRange = myCars[i].range()
-                            iMinRange=i
+                        if (myCars[i].SOC < minSOC and myCars[i].SOC < maxSOCVehExcessChrg_a[i]) or myCars[i].SOC < minSOCVeh_a[i]:
+                            if i == iMinSOCOld:
+                                minSOC = myCars[i].SOC-5
+                            else:
+                                minSOC = myCars[i].SOC
+                            iMinSOC=i
                     
-                myCar = myCars[iMinRange]
-                charger = chargers[iMinRange]
-                minSOCVeh = minSOCVeh_a[iMinRange]
-                maxSOCVehProdChrg = maxSOCVehProdChrg_a[iMinRange]
-                maxSOCVehExcessChrg = maxSOCVehExcessChrg_a[iMinRange]
-
+                myCar = myCars[iMinSOC]
+                charger = chargers[iMinSOC]
+                minSOCVeh = minSOCVeh_a[iMinSOC]
+                maxSOCVehProdChrg = maxSOCVehProdChrg_a[iMinSOC]
+                maxSOCVehExcessChrg = maxSOCVehExcessChrg_a[iMinSOC]
+                for i in range(len(chargers)):
+                    if i != iMinSOC:
+                        chargers[i].setPower(0, flgAllow1P, 0, 11000)
+        
                 if  (self.stChargeMode == AUTO and myCar.SOC < maxSOCVehProdChrg) or self.stChargeMode == AUTO_HIGH:
                     minSOCHomeExcessCharge = minSOCHomeExcessChargeMin
                 else:
@@ -174,13 +188,6 @@ class chargeStrategy:
 
                         else:  # below min SOC: charge with full power
                             pwrAvl = 11000
-            else:
-                pwrAvl = 0
-
-        try:
-            if self.stChargeMode != MANUAL:
-                # asyncio.run(plug.update())
-                
 
                 __powerMin= max (0, int(homeData.Prod) - int(homeData.Cons_home) - max(0, min(pred.maxBattPowChrg + (homeData.ratSOCMaxOper - homeData.SOC) * 1000,pred.maxBattPowChrg)))
                 __powerMax= int(homeData.Prod) - int(homeData.Cons_home) - max(min(pred.maxBattPowDischa - (homeData.SOC - homeData.ratSOCMinOper ) * 1000, 0), pred.maxBattPowDischa)
@@ -196,13 +203,8 @@ class chargeStrategy:
                 print("pwrAvlMin: " + str(__powerMin))
                 print("pwrAvlMax: " + str(__powerMax))
                 charger.setPower(self.pwrAvlFltd, flgAllow1P, __powerMin, __powerMax)
-            else:
-                # do nothing if in manual mode
-                print
-            
+            else: # manual mode, no actuation
+                pwrAvl = 0
 
-        except Exception as e:
-            print("Exception in chargeStrategy.calcStrategy",e)
-            
         # print("ChargeStratEnd")
         return 0

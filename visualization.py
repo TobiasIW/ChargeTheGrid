@@ -132,7 +132,7 @@ class visualizationClass:
         __is_from_today = self.Time_a[0].date() == __current_date
         
         if not __is_from_today:
-            self.__init__(config)
+            self.__init__(config, len(myCars))
         a=1
     def clear(self, nCombos):
         self.x = []
@@ -267,11 +267,12 @@ class visualizationClass:
 
         plt7.set_xlim(ti[0], __endofday)
         # add self.ConsHome_a all charger consumptions in self.combo[c]
-        self.consTotal = [
-            self.ConsHome_a[n] + sum(self.combo[c].Car_Consumption[n] for c in range(len(self.combo)))
-            for n in range(len(self.Time_a))
-        ]
-        plt1.plot(ti, self.consTotal, label="Verbrauch", linewidth="0.5")
+        self.ConsTotal = [0] * len(self.ConsHome_a)
+        for i in range(len(self.ConsHome_a)):
+            self.ConsTotal[i] = self.ConsHome_a[i] + sum(self.combo[c].ConsChrg_a[i] for c in range(len(self.combo)))
+   
+        
+        plt1.plot(ti, self.ConsTotal, label="Verbrauch", linewidth="0.5")
         plt1.plot(ti, self.Prod_a, label="Produktion", linewidth="0.5")
         plt1.plot(ti, self.Batt_pow_a, label="Laden(-)/Entladen(+)", linewidth="0.5")
         plt1.plot(ti, self.GridFeedIn_pow_a, label="Einspeisung(+)/Bezug(-)", linewidth="0.5")
@@ -397,7 +398,7 @@ class visualizationClass:
         fig = make_subplots(rows=3+len(myCars), cols=1, shared_xaxes=True, vertical_spacing=0.015, row_heights=[0.3]+[0.2 for _ in range(len(myCars))]+[0.2, 0.3])
 
         # Add consumption trace to the first subplot
-        fig.add_trace(go.Scatter(x=ti, y=self.consTotal, mode='lines',line=dict(color='blue', width=1), name='total consumption'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=ti, y=self.ConsTotal, mode='lines',line=dict(color='blue', width=1), name='total consumption'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.ConsHome_a, mode='lines', line=dict(color='purple', width=1), name='home consumption'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.Prod_a, mode='lines', line=dict(color='orange', width=1), name='Production'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.GridFeedIn_pow_a, line=dict(color='red', width=1), mode='lines', name='Einspeisung(+)/Bezug(-)'), row=1, col=1)
@@ -442,10 +443,16 @@ class visualizationClass:
             yaxis2_title='Car SOC',
             yaxis3_title='Home SOC',
             yaxis4_title='Energy',
-            height=800,
+            height=600+ (len(myCars) * 200),
             width=1000,
             autosize=True
         )
+        for i in range(0,len(myCars),1):  # Start from yaxis2
+            fig.update_layout({f"yaxis{i+2}_title": 'Car SOC '+ myCars[i].name})  # Set y-axis title for each car
+        fig.update_layout({f"yaxis{i+3}_title": 'Home SOC'})  
+        #fig.update_layout({f"yaxis{i+4}_title": 'Energy'})  
+
+            
         # Set x-axis range from 12:00 AM to 11:59 PM of the current day
         current_date = datetime.datetime.now().date()
         x_range = [datetime.datetime.combine(current_date, datetime.datetime.min.time()),
