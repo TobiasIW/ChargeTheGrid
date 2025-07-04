@@ -14,6 +14,7 @@ class carClass:
     lastChange = datetime.datetime.min
     def __init__(self, carConfig):
         self.capacityWs =carConfig["carCapacity"]* 1000 * 3600  # Convert kWh to Ws
+        self.capacityWh = carConfig["carCapacity"] *1000  # Convert kWh to Wh
         self.minSOCVeh_a = []
         self.maxSOCVehProdChrg_a = []
         self.maxSOCVehExcessChrg_a = []

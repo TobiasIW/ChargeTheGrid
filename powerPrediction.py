@@ -15,7 +15,7 @@ class PredictionClass:
     latitude = 48.9805
     longitude = 8.98356
     qBatt = 8000  # Batteriekapazität Hausbattereie 8kWh
-    qVeh = 76000
+    
     maxBattPowDischa = -3300
     maxBattPowChrg = 3300
     maxPowInv_C = 7000
@@ -175,9 +175,9 @@ class PredictionClass:
                     deltaSOC, __flgPlannedTrip, __flgVehAway = self.getDailyCons(self.date_a[i], self.date_a[i + 1], car)
                     r = car.capacityWs / self.carsTotalCap
                     if not __flgVehAway:
-                        car.minSOCVeh_a[i] = car.minSOCVeh_a[i + 1] - max(0, _qExcess*r) / self.qVeh * 100
-                        car.maxSOCVehProdChrg_a[i] = car.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt*r / self.qVeh * 100
-                        car.maxSOCVehExcessChrg_a[i] = car.maxSOCVehExcessChrg_a[i + 1] - _qCutOff*r / self.qVeh * 100
+                        car.minSOCVeh_a[i] = car.minSOCVeh_a[i + 1] - max(0, _qExcess*r) / car.capacityWh * 100
+                        car.maxSOCVehProdChrg_a[i] = car.maxSOCVehProdChrg_a[i + 1] - _qExcessBatt*r / car.capacityWh * 100
+                        car.maxSOCVehExcessChrg_a[i] = car.maxSOCVehExcessChrg_a[i + 1] - _qCutOff*r / car.capacityWh * 100
                     else:
                         car.minSOCVeh_a[i] = car.minSOCVeh_a[i+1]
                         car.maxSOCVehProdChrg_a[i] = car.maxSOCVehProdChrg_a[i+1]
@@ -234,7 +234,7 @@ class PredictionClass:
         if (not __foundTripOnDate) and arg_date.hour == self.hDailyCons and arg_dateOld.hour > self.hDailyCons:
             cons = 0.12 * car.consumption * 1000 # default daily trip: 12km
         # print("Day: "+str(date)+", Cons: "+str(cons))
-        return (cons / self.qVeh * 100, __flgPlannedTrip, __flgVehAway)
+        return (cons / car.capacityWh * 100, __flgPlannedTrip, __flgVehAway)
 
 
 
