@@ -298,8 +298,8 @@ class visualizationClass:
         plt2.fill_between(pred.date_a, myCars[0].minSOCVeh_a, np.maximum(myCars[0].maxSOCVehProdChrg_a,  myCars[0].minSOCVeh_a), linewidth=0.0, color='orange', alpha=0.4, label='Fz SOC: vollst. Ertrag laden')
         plt2.fill_between(pred.date_a, myCars[0].maxSOCVehProdChrg_a, myCars[0].maxSOCVehExcessChrg_a, color='palegreen', alpha=0.4, label='Fz SOC: Smart charging')
         plt2.fill_between(pred.date_a, myCars[0].maxSOCVehExcessChrg_a, 110, color='deepskyblue', alpha=0.4, label='Fz SOC: Laden bei Abriegelung')
-
-        plt2.annotate("{:10.0f}".format(self.combo[0].Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.combo[0].Car_SOC_a[i - 2]), horizontalalignment="right")
+        if i >= 2:
+            plt2.annotate("{:10.0f}".format(self.combo[0].Car_SOC_a[i - 2]) + "%", xy=(ti[i - 2], self.combo[0].Car_SOC_a[i - 2]), horizontalalignment="right")
 
 
         #plt2_2.plot(pred.date_a, pred.minSOCVeh_a, 'm--', label="Min SOC Veh High Prio")
