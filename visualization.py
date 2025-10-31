@@ -403,12 +403,24 @@ class visualizationClass:
         fig.add_trace(go.Scatter(x=ti, y=self.Prod_a, mode='lines', line=dict(color='orange', width=1), name='Production'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.GridFeedIn_pow_a, line=dict(color='red', width=1), mode='lines', name='Einspeisung(+)/Bezug(-)'), row=1, col=1)
         fig.add_trace(go.Scatter(x=ti, y=self.Batt_pow_a, mode='lines', line=dict(color='green', width=1), name='Laden(-)/Entladen(+)'), row=1, col=1)
-
         __colTomato = 'rgba(255, 99, 71, 0.4)'
         __colBlue = 'rgba(0, 191, 255, 0.4)'
         __colGreen = 'rgba(152, 255, 152, 0.4)'
         __colOrange = 'rgba(255, 165, 0, 0.4)'
         __colYellow = 'rgba(255, 215, 0, 0.4)'
+        # plot pred.powCons_a over pred.date_a and fill red from y=0 to pred.powCons_a
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.powProd_a, mode='lines', line=dict(color='orange', width=0.5), name='präd. Erzeugung opt.'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.powProdLow_a, mode='lines', fill='tonexty', fillcolor=__colOrange, line=dict(color='orange', width=0.5), name='präd. Erzeugung pess.'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=pred.date_a, y=pred.powCons_a, mode='lines', line=dict(color='purple', width=0.5), name='präd. Verbrauch'), row=1, col=1)
+        # fig.add_trace(go.Scatter(x=pred.date_a, y=[0]*len(pred.date_a), mode='lines', fill='tonexty', fillcolor=__colTomato,line=dict(color='red', width=1), showlegend=False, name='y=0'), row=1, col=1)
+        
+   
+
+        # vergleich von oben
+        # plt1.fill_between(pred.date_a, pred.powProdLow_a, pred.powProd_a, color='C0', alpha=0.4, label='Präd. Produktion')
+        # plt1_2.plot(pred.date_a, pred.powCons_a, 'm', label="präd. Verbrauch", linewidth="0.5")
+        # plt1_2.fill_between(pred.date_a, pred.powProdLow_a, pred.powProd_a, color='C0', alpha=0.4)
+        
         for c in range(0,len(myCars),1):
             fig.add_trace(go.Scatter(x=ti, y=self.combo[c].Car_SOC_a, mode='lines', showlegend=True, name='Car SOC'), row=2+c, col=1)
             #invisible line for filling area between excess charge limit and 100%

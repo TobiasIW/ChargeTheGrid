@@ -12,7 +12,7 @@ fi
 # archive graph.svg from yesterday if it does not exist yet
 if [ ! -f /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/graph_$(date --date="1 day ago" +\%F).svg ]; then
   cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/graph.svg /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/graph_$(date --date="1 day ago" +\%F).svg
-  
+  cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/plotly_plot.html /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/graph_$(date --date="1 day ago" +\%F).svg
   # Create a variable for the subfolder name for yesterday's month (YYYY_MM)
   subfolder_name=$(date --date="1 day ago" +\%Y_\%m)
   if [ ! -d /var/www/html/graphs/$subfolder_name ]; then
@@ -22,7 +22,7 @@ if [ ! -f /home/pi/ChargeOS_v2/ChargeTheGrid/data/archive/graph_$(date --date="1
 
   # Copy graph.svg to the month folder
   sudo cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/graph.svg /var/www/html/graphs/$subfolder_name/graph_$(date --date="1 day ago" +\%F).svg
-
+   cp /home/pi/ChargeOS_v2/ChargeTheGrid/data/plotly_plot.html /var/www/html/graphs/$subfolder_name/plotly_plot_$(date --date="1 day ago" +\%F).html
 fi
 
 while [ $SECONDS -le 60 ]
