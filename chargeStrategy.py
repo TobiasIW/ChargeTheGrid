@@ -63,7 +63,7 @@ class chargeStrategy:
             pwrAvl = 11000
             for charger in chargers:
                 charger.setPower(pwrAvl, flgAllow1P, 0, 11000)
-        if self.stChargeMode >= AUTO_CUTOFF:
+        if self.stChargeMode!= MANUAL and self.stChargeMode >= AUTO_CUTOFF:
             if len(pred.date_a) > 0:
                 timeNow_ts = pred.toTimestamp(datetime.datetime.now())
                 dateDay_a_ts = [pred.toTimestamp(pred.date_a[n]) for n in range(0, len(pred.date_a))]
